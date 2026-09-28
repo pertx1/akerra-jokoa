@@ -524,6 +524,11 @@ function update(dt) {
 /* =========================================================
    Marrazketa (render)
    ========================================================= */
+// Zerrenda gisa errepikatzen den geruza bat marrazten du, zinta
+// jarraitu baten moduan (mundu-koordenatuetan oinarrituta, salto/
+// tirankada gabe pantailatik ateratzean). Textura ez bada ehunki
+// perfektuki errepikagarria, ondoz ondoko lauza bakoitza horizontalki
+// ispilatzen da aurrekoarekiko, juntura ia ikusezin uzteko.
 function drawParallaxLayer(key, offset, y, h, speedFactor) {
   const img = assets[key];
   const naturalRatio = img ? img.width / img.height : 1280 / 720;
@@ -531,7 +536,11 @@ function drawParallaxLayer(key, offset, y, h, speedFactor) {
   let startX = -offset % w;
   if (startX > 0) startX -= w;
   for (let x = startX; x < LOGICAL_W; x += w) {
-    drawSprite(ctx, key, x, y, w, h);
+    // mundu-koordenatuko indizea erabiltzen dugu (ez pantailakoa), lauzek
+    // korritzean etengabe txandakatzen jarraitu dezaten, keinurik gabe
+    const worldIndex = Math.round((offset + x) / w);
+    const flip = (((worldIndex % 2) + 2) % 2) !== 0;
+    drawSprite(ctx, key, x, y, w, h, { flip });
   }
 }
 
