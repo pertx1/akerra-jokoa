@@ -880,26 +880,23 @@ function pickWeightedPrize() {
   return CONFIG.PRIZES[0];
 }
 
-function generateCode(prize) {
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-  let suffix = '';
-  for (let i = 0; i < 4; i++) suffix += chars[Math.floor(Math.random() * chars.length)];
-  return `AKERRA-${prize.label}-${suffix}`;
-}
-
+// Kodea sariaren izena bera da (J10, V15, M20). Lehen gordetako kode
+// luzeek (AKERRA-J10-XXXX) beren `label`-a erabiltzen dute, sari bera mantenduz.
 function loadSavedPrize() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
     const data = JSON.parse(raw);
-    if (data && data.code) return data;
+    const valid = CONFIG.PRIZES.map((p) => p.label);
+    if (data && valid.includes(data.code)) return { code: data.code };
+    if (data && valid.includes(data.label)) return { code: data.label };
   } catch (e) { /* localStorage ez erabilgarri */ }
   return null;
 }
 
-function savePrize(code, label) {
+function savePrize(code) {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ code, label }));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ code }));
   } catch (e) { /* ezin gorde, ez du jokoa apurtzen */ }
 }
 
@@ -943,8 +940,8 @@ function initPrizeScreen() {
         }
       });
       const prize = pickWeightedPrize();
-      const code = generateCode(prize);
-      savePrize(code, prize.label);
+      const code = prize.label;
+      savePrize(code);
       setTimeout(() => revealPrizeResult(code), 500);
     };
     btn.onclick = onChoose;
