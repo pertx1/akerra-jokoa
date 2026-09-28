@@ -474,9 +474,7 @@ function drawParallaxLayer(key, offset, y, h, speedFactor) {
   let startX = -offset % w;
   if (startX > 0) startX -= w;
   for (let x = startX; x < LOGICAL_W; x += w) {
-    const worldIndex = Math.round((offset + x) / w);
-    const flip = (((worldIndex % 2) + 2) % 2) !== 0;
-    drawSprite(ctx, key, x, y, w, h, { flip });
+    drawSprite(ctx, key, x, y, w, h);
   }
 }
 
