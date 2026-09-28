@@ -353,8 +353,8 @@ html, body {
 }
 
 .eguzkilore-choice img {
-  width: 84px;
-  height: 84px;
+  width: 96px;
+  height: 96px;
   transition: transform 0.25s ease, filter 0.25s ease;
   filter: drop-shadow(0 0 0px rgba(224,168,60,0));
 }
@@ -423,6 +423,6 @@ html, body {
 }
 
 @media (max-width: 480px) {
-  .eguzkilore-choice img { width: 64px; height: 64px; }
+  .eguzkilore-choice img { width: 72px; height: 72px; }
   .prize-choices { gap: 14px; }
 }

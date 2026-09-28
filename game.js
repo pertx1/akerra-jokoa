@@ -229,7 +229,7 @@ const GROUND_H_RATIO = 0.22;
 const PLAYER_X_RATIO = 0.25;
 
 const player = {
-  w: 70, h: 90,
+  w: 120, h: 160,
   y: 0, vy: 0,
   onGround: true,
   runFrame: 0,
@@ -238,7 +238,7 @@ const player = {
 };
 
 const witch = {
-  x: 40, y: 0, w: 90, h: 100,
+  x: 40, y: 0, w: 150, h: 170,
   bobT: Math.random() * Math.PI * 2,
   fleeing: false,
   alpha: 1,
@@ -294,9 +294,9 @@ function spawnObstacle() {
   const types = ['root_1', 'root_2', 'root_3'];
   const type = types[Math.floor(Math.random() * types.length)];
   const sizes = {
-    root_1: { w: 42, h: 42 },
-    root_2: { w: 56, h: 50 },
-    root_3: { w: 70, h: 58 },
+    root_1: { w: 60, h: 60 },
+    root_2: { w: 80, h: 70 },
+    root_3: { w: 100, h: 80 },
   };
   const size = sizes[type];
   obstacles.push({
@@ -441,7 +441,7 @@ function update(dt) {
       }
     }
 
-    const targetX = LOGICAL_W * PLAYER_X_RATIO + 95;
+    const targetX = LOGICAL_W * PLAYER_X_RATIO + player.w + 20;
     if (winSeq.phase === 'approach') {
       winSeq.stoneX -= currentSpeed * dt * 0.6;
       if (winSeq.stoneX <= targetX || winSeq.t > 2.6) {
@@ -512,11 +512,11 @@ function render() {
 
   // harria + eguzkilorea (irabazte-sekuentzia)
   if (gameState === 'winSeq' && winSeq) {
-    const stoneW = 110, stoneH = 92;
+    const stoneW = 130, stoneH = 110;
     const stoneY = getGroundY() - stoneH;
     drawSprite(ctx, 'stone', winSeq.stoneX, stoneY, stoneW, stoneH);
 
-    const eguW = 46;
+    const eguW = 70;
     const eguX = winSeq.stoneX + stoneW / 2 - eguW / 2;
     const eguY = stoneY - eguW * 0.75;
     const pulse = 0.5 + 0.5 * Math.sin(performance.now() / 180);
