@@ -260,6 +260,12 @@ let lastTime = 0;
 
 const GROUND_H_RATIO = 0.22;
 const PLAYER_X_RATIO = 0.25;
+// Lurzoruan bermatzen diren elementuak (oztopoak, harria) pixel hauek
+// hondoratzen dira lurzoruan, airean flotatu beharrean gainean egon daitezen
+const GROUND_OVERLAP = 16;
+// Lurzoruaren lauza bakoitza zabalago marrazten da (proportzioa mantenduz
+// altueran, baina zabalera gehiago luzatuz) junturak gutxiagotan agertzeko
+const GROUND_WIDTH_SCALE = 1.6;
 
 // Sprite bakoitzaren helburu-altuera (px logiko), zabalera irudi
 // bakoitzaren benetako proportziotik kalkulatzen da (spriteBox bidez)
@@ -361,7 +367,7 @@ function spawnObstacle() {
     x: LOGICAL_W + 20,
     w: size.w,
     h: size.h,
-    y: getGroundY() - size.h,
+    y: getGroundY() - size.h + GROUND_OVERLAP,
   });
 }
 
@@ -529,10 +535,10 @@ function update(dt) {
 // tirankada gabe pantailatik ateratzean). Textura ez bada ehunki
 // perfektuki errepikagarria, ondoz ondoko lauza bakoitza horizontalki
 // ispilatzen da aurrekoarekiko, juntura ia ikusezin uzteko.
-function drawParallaxLayer(key, offset, y, h, speedFactor) {
+function drawParallaxLayer(key, offset, y, h, speedFactor, widthScale) {
   const img = assets[key];
   const naturalRatio = img ? img.width / img.height : 1280 / 720;
-  const w = h * naturalRatio;
+  const w = h * naturalRatio * (widthScale || 1);
   let startX = -offset % w;
   if (startX > 0) startX -= w;
   for (let x = startX; x < LOGICAL_W; x += w) {
@@ -557,9 +563,10 @@ function render() {
   const bgH = LOGICAL_H;
   drawStaticBackground('bg_forest', 0, bgH);
 
-  // lurzorua
+  // lurzorua (lauza bakoitza zabalagoa marrazten da, junturak gutxiagotan
+  // ager daitezen eta korrikaren zinta are jarraituagoa ikus dadin)
   const groundH = LOGICAL_H * GROUND_H_RATIO;
-  drawParallaxLayer('ground', groundOffset, LOGICAL_H - groundH, groundH, 1);
+  drawParallaxLayer('ground', groundOffset, LOGICAL_H - groundH, groundH, 1, GROUND_WIDTH_SCALE);
 
   // sorgina (beheko zatia gardenagoa: iturburuko irudia bi zerrendatan
   // ebaki eta bakoitza bere lekuan marrazten dugu, irudia bikoiztu gabe)
@@ -576,7 +583,7 @@ function render() {
   if (gameState === 'winSeq' && winSeq) {
     const stoneBox = spriteBox('stone', SPRITE_TARGET_H.stone, SPRITE_FALLBACK_ASPECT.stone);
     const stoneW = stoneBox.w, stoneH = stoneBox.h;
-    const stoneY = getGroundY() - stoneH;
+    const stoneY = getGroundY() - stoneH + GROUND_OVERLAP;
     drawSprite(ctx, 'stone', winSeq.stoneX, stoneY, stoneW, stoneH);
 
     const eguBox = spriteBox('eguzkilore', SPRITE_TARGET_H.eguzkilore_win, SPRITE_FALLBACK_ASPECT.eguzkilore_win);
