@@ -473,11 +473,8 @@ function drawParallaxLayer(key, offset, y, h, speedFactor) {
   const w = h * naturalRatio;
   let startX = -offset % w;
   if (startX > 0) startX -= w;
-  let i = 0;
   for (let x = startX; x < LOGICAL_W; x += w) {
-    const flip = (Math.round(x / w) + i) % 2 !== 0;
-    drawSprite(ctx, key, x, y, w, h, { flip });
-    i++;
+    drawSprite(ctx, key, x, y, w, h);
   }
 }
 
