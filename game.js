@@ -82,9 +82,34 @@ function loadAssets(onProgress) {
   })));
 }
 
+// Irudi handiak (2000px arte) behin bakarrik eskalatzen dira pantailako
+// neurrira eta cachean gordetzen dira. Bestela fotograma bakoitzean txikitu
+// beharko lirateke, eta mugikorretan tirankadak eragiten dituzte.
+const scaledCache = new Map();
+
+function scaledSprite(key, w, h) {
+  const img = assets[key];
+  if (!img) return null;
+  const dpr = window.devicePixelRatio || 1;
+  const pw = Math.max(1, Math.round(w * dpr));
+  const ph = Math.max(1, Math.round(h * dpr));
+  const id = key + '|' + pw + 'x' + ph;
+  let c = scaledCache.get(id);
+  if (!c) {
+    c = document.createElement('canvas');
+    c.width = pw;
+    c.height = ph;
+    const cctx = c.getContext('2d');
+    cctx.imageSmoothingQuality = 'high';
+    cctx.drawImage(img, 0, 0, pw, ph);
+    scaledCache.set(id, c);
+  }
+  return c;
+}
+
 function drawSprite(ctx, key, x, y, w, h, opts) {
   opts = opts || {};
-  const img = assets[key];
+  const img = scaledSprite(key, w, h);
   ctx.save();
   if (opts.alpha !== undefined) ctx.globalAlpha = opts.alpha;
   if (opts.flip) {
@@ -121,17 +146,18 @@ function spriteBox(key, targetH, fallbackAspect) {
 // bi zerrendatan ebakita marrazten da (ez irudia osoa bikoiztuta), horrela
 // artelana ez da bikoiztu edo distortsionatzen.
 function drawWitch() {
-  const img = assets.witch;
+  const img = scaledSprite('witch', witch.w, witch.h);
   const splitRatio = 0.65;
   if (img) {
-    const sw = img.naturalWidth;
-    const sh = img.naturalHeight;
-    const splitY = sh * splitRatio;
+    const sw = img.width;
+    const sh = img.height;
+    const splitY = Math.round(sh * splitRatio);
+    const topH = witch.h * (splitY / sh);
     ctx.save();
     ctx.globalAlpha = witch.alpha;
-    ctx.drawImage(img, 0, 0, sw, splitY, witch.x, witch.y, witch.w, witch.h * splitRatio);
+    ctx.drawImage(img, 0, 0, sw, splitY, witch.x, witch.y, witch.w, topH);
     ctx.globalAlpha = witch.alpha * 0.5;
-    ctx.drawImage(img, 0, splitY, sw, sh - splitY, witch.x, witch.y + witch.h * splitRatio, witch.w, witch.h * (1 - splitRatio));
+    ctx.drawImage(img, 0, splitY, sw, sh - splitY, witch.x, witch.y + topH, witch.w, witch.h - topH);
     ctx.restore();
   } else {
     drawSprite(ctx, 'witch', witch.x, witch.y, witch.w, witch.h * splitRatio, { alpha: witch.alpha });
@@ -229,6 +255,9 @@ window.addEventListener('orientationchange', () => { resizeCanvas(); checkOrient
 const canvas = document.getElementById('game-canvas');
 const ctx = canvas.getContext('2d');
 let LOGICAL_W = 960, LOGICAL_H = 540;
+let lastSizeKey = '';
+let assetsReady = false;
+let groundStrip = null; // { canvas, w, h } — lurzoruaren zinta aurrez marraztuta
 
 function resizeCanvas() {
   const container = screens.game;
@@ -248,6 +277,14 @@ function resizeCanvas() {
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   LOGICAL_W = w;
   LOGICAL_H = h;
+
+  const sizeKey = w + 'x' + h + '@' + dpr;
+  if (sizeKey !== lastSizeKey) {
+    lastSizeKey = sizeKey;
+    scaledCache.clear();
+    groundStrip = null;
+    if (assetsReady) prewarmCaches();
+  }
 }
 
 /* =========================================================
@@ -265,7 +302,7 @@ const PLAYER_X_RATIO = 0.25;
 const GROUND_OVERLAP = 16;
 // Lurzoruaren lauza bakoitza zabalago marrazten da (proportzioa mantenduz
 // altueran, baina zabalera gehiago luzatuz) junturak gutxiagotan agertzeko
-const GROUND_WIDTH_SCALE = 1.6;
+const GROUND_WIDTH_SCALE = 2.0;
 
 // Sprite bakoitzaren helburu-altuera (px logiko), zabalera irudi
 // bakoitzaren benetako proportziotik kalkulatzen da (spriteBox bidez)
@@ -307,6 +344,21 @@ const witch = {
   lungeT: 0,
 };
 
+// Sprite guztiak aldez aurretik prestatzen dira, oztopo bat lehen aldiz
+// agertzean irudi handia deskodetu/eskalatu beharrak tirankadarik ez eragiteko
+function prewarmCaches() {
+  ['player_run_1', 'player_run_2', 'player_run_3', 'player_run_4', 'player_run_5',
+    'player_run_6', 'player_jump', 'player_win'].forEach((k) => scaledSprite(k, player.w, player.h));
+  scaledSprite('witch', witch.w, witch.h);
+  ['root_1', 'root_2', 'root_3', 'stone', 'eguzkilore_win'].forEach((k) => {
+    const imgKey = k === 'eguzkilore_win' ? 'eguzkilore' : k;
+    const box = spriteBox(imgKey, SPRITE_TARGET_H[k], SPRITE_FALLBACK_ASPECT[k]);
+    scaledSprite(imgKey, box.w, box.h);
+  });
+  scaledSprite('bg_forest', LOGICAL_W, LOGICAL_H);
+  buildGroundStrip(LOGICAL_H * GROUND_H_RATIO);
+}
+
 function computeSpriteSizes() {
   const p = spriteBox('player_run_1', SPRITE_TARGET_H.player, SPRITE_FALLBACK_ASPECT.player);
   player.w = p.w; player.h = p.h;
@@ -316,8 +368,8 @@ function computeSpriteSizes() {
 
 let obstacles = [];
 let nextSpawnIn = 1.2;
-let bgOffset = 0;
 let groundOffset = 0;
+const progressFillEl = document.getElementById('progress-fill');
 let currentSpeed = CONFIG.SPEED_INITIAL;
 
 let winSeq = null; // { phase, t, stone }
@@ -331,7 +383,6 @@ function resetGame() {
   gameState = 'playing';
   obstacles = [];
   nextSpawnIn = 1.4;
-  bgOffset = 0;
   groundOffset = 0;
   currentSpeed = CONFIG.SPEED_INITIAL;
   player.vy = 0;
@@ -346,7 +397,7 @@ function resetGame() {
   witch.lungeT = 0;
   witch.x = 40;
   winSeq = null;
-  document.getElementById('progress-fill').style.width = '0%';
+  progressFillEl.style.width = '0%';
 }
 
 function jump() {
@@ -426,12 +477,11 @@ function update(dt) {
   if (gameState === 'playing') {
     elapsed += dt;
     const progressRatio = Math.min(1, elapsed / CONFIG.DURATION);
-    document.getElementById('progress-fill').style.width = (progressRatio * 100) + '%';
+    progressFillEl.style.width = (progressRatio * 100) + '%';
 
     currentSpeed = CONFIG.SPEED_INITIAL + (CONFIG.SPEED_MAX - CONFIG.SPEED_INITIAL) * progressRatio;
 
-    bgOffset = (bgOffset + currentSpeed * 0.3 * dt) % LOGICAL_W;
-    groundOffset = (groundOffset + currentSpeed * dt) % LOGICAL_W;
+    groundOffset += currentSpeed * dt;
 
     // jokalariaren fisika
     player.vy += CONFIG.GRAVITY * dt;
@@ -489,8 +539,7 @@ function update(dt) {
   } else if (gameState === 'winSeq') {
     winSeq.t += dt;
     currentSpeed = Math.max(60, currentSpeed - 260 * dt);
-    bgOffset = (bgOffset + currentSpeed * 0.3 * dt) % LOGICAL_W;
-    groundOffset = (groundOffset + currentSpeed * dt) % LOGICAL_W;
+    groundOffset += currentSpeed * dt;
 
     // sorgina ihesi
     witch.x -= 500 * dt;
@@ -530,23 +579,41 @@ function update(dt) {
 /* =========================================================
    Marrazketa (render)
    ========================================================= */
-// Zerrenda gisa errepikatzen den geruza bat marrazten du, zinta
-// jarraitu baten moduan (mundu-koordenatuetan oinarrituta, salto/
-// tirankada gabe pantailatik ateratzean). Textura ez bada ehunki
-// perfektuki errepikagarria, ondoz ondoko lauza bakoitza horizontalki
-// ispilatzen da aurrekoarekiko, juntura ia ikusezin uzteko.
-function drawParallaxLayer(key, offset, y, h, speedFactor, widthScale) {
-  const img = assets[key];
-  const naturalRatio = img ? img.width / img.height : 1280 / 720;
-  const w = h * naturalRatio * (widthScale || 1);
-  let startX = -offset % w;
-  if (startX > 0) startX -= w;
-  for (let x = startX; x < LOGICAL_W; x += w) {
-    // mundu-koordenatuko indizea erabiltzen dugu (ez pantailakoa), lauzek
-    // korritzean etengabe txandakatzen jarraitu dezaten, keinurik gabe
-    const worldIndex = Math.round((offset + x) / w);
-    const flip = (((worldIndex % 2) + 2) % 2) !== 0;
-    drawSprite(ctx, key, x, y, w, h, { flip });
+// Lurzoruaren zinta behin marrazten da canvas batean: textura normala eta,
+// ondoan, bere ispilua. Bi junturak simetrikoak dira, beraz zinta amaigabe
+// errepika daiteke ebakirik gabe. Fotograma bakoitzean zinta hau 2-3 aldiz
+// kopiatzea besterik ez da behar (eskalatu edo biratu gabe).
+function buildGroundStrip(h) {
+  const img = assets.ground;
+  const aspect = img ? img.naturalWidth / img.naturalHeight : 1280 / 220;
+  const dpr = window.devicePixelRatio || 1;
+  const tilePw = Math.max(1, Math.round(h * aspect * GROUND_WIDTH_SCALE * dpr));
+  const ph = Math.max(1, Math.round(h * dpr));
+  const c = document.createElement('canvas');
+  c.width = tilePw * 2;
+  c.height = ph;
+  const g = c.getContext('2d');
+  if (img) {
+    g.imageSmoothingQuality = 'high';
+    g.drawImage(img, 0, 0, tilePw, ph);
+    g.translate(tilePw * 2, 0);
+    g.scale(-1, 1);
+    g.drawImage(img, 0, 0, tilePw, ph);
+  } else {
+    g.fillStyle = FALLBACK_COLORS.ground;
+    g.fillRect(0, 0, c.width, ph);
+  }
+  groundStrip = { canvas: c, w: c.width / dpr, h };
+}
+
+function drawGround(offset, y, h) {
+  if (!groundStrip || groundStrip.h !== h) buildGroundStrip(h);
+  const dpr = window.devicePixelRatio || 1;
+  const period = groundStrip.w;
+  // pixel osoetara biribildu, kopien arteko juntura-lerro finik ez agertzeko
+  let x = Math.round(-(offset % period) * dpr) / dpr;
+  for (; x < LOGICAL_W; x += period) {
+    ctx.drawImage(groundStrip.canvas, x, y, period, h);
   }
 }
 
@@ -563,10 +630,9 @@ function render() {
   const bgH = LOGICAL_H;
   drawStaticBackground('bg_forest', 0, bgH);
 
-  // lurzorua (lauza bakoitza zabalagoa marrazten da, junturak gutxiagotan
-  // ager daitezen eta korrikaren zinta are jarraituagoa ikus dadin)
+  // lurzorua
   const groundH = LOGICAL_H * GROUND_H_RATIO;
-  drawParallaxLayer('ground', groundOffset, LOGICAL_H - groundH, groundH, 1, GROUND_WIDTH_SCALE);
+  drawGround(groundOffset, LOGICAL_H - groundH, groundH);
 
   // sorgina (beheko zatia gardenagoa: iturburuko irudia bi zerrendatan
   // ebaki eta bakoitza bere lekuan marrazten dugu, irudia bikoiztu gabe)
@@ -883,6 +949,8 @@ loadAssets((done, total) => {
   document.getElementById('loading-percent').textContent = pct + '%';
 }).then(() => {
   computeSpriteSizes();
+  assetsReady = true;
+  prewarmCaches();
   setTimeout(() => {
     showScreen('start');
   }, 250);
