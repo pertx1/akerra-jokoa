@@ -358,7 +358,6 @@ const GROUND_WIDTH_SCALE = 2.0;
 const SPRITE_TARGET_H = {
   player: 160,
   witch: 170,
-  root_1: 60,
   stone: 110,
   eguzkilore_win: 70,
 };
@@ -371,14 +370,21 @@ const SPRITE_FALLBACK_ASPECT = {
   stone: 130 / 110,
   eguzkilore_win: 1,
 };
-// Sustrai guztiak root_1-en zabalera berarekin marrazten dira; altuera
-// bakoitzaren proportziotik ateratzen da. Horrela hirurak tamaina bertsukoak
-// ikusten dira, marrazkien forma ezberdina izan arren.
+// Sustrai guztiak zabalera berarekin marrazten dira; altuera bakoitzaren
+// proportziotik ateratzen da, gehienez ROOT_MAX_H (arku altuak txikiagotuz).
+// Txikiagotu balio hauek jauzia errazteko, handitu zailtzeko.
+const ROOT_WIDTH = 130;
+const ROOT_MAX_H = 60;
 function obstacleBox(type) {
-  const ref = spriteBox('root_1', SPRITE_TARGET_H.root_1, SPRITE_FALLBACK_ASPECT.root_1);
   const img = assets[type];
   const aspect = img ? imgWidth(img) / imgHeight(img) : SPRITE_FALLBACK_ASPECT[type];
-  return { w: ref.w, h: ref.w / aspect };
+  let w = ROOT_WIDTH;
+  let h = w / aspect;
+  if (h > ROOT_MAX_H) {
+    h = ROOT_MAX_H;
+    w = h * aspect;
+  }
+  return { w, h };
 }
 
 const player = {
@@ -489,9 +495,11 @@ function checkCollisions() {
   const px = LOGICAL_W * PLAYER_X_RATIO;
   const pw = player.w * 0.7;
   const ph = player.h * 0.7;
+  // oinetan finkatuta: alboak eta burua bakarrik murrizten dira, bestela
+  // sustrai baxuek ez lukete inoiz zutik dagoen jokalaria jotzen
   const pRect = {
     x: px + (player.w - pw) / 2,
-    y: player.y + (player.h - ph) / 2,
+    y: player.y + player.h - ph,
     w: pw,
     h: ph,
   };
