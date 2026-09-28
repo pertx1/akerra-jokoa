@@ -358,8 +358,8 @@ const GROUND_WIDTH_SCALE = 2.0;
 const SPRITE_TARGET_H = {
   player: 160,
   witch: 130,
-  stone: 110,
-  eguzkilore_win: 70,
+  stone: 58, // harri ikusgaiaren altuera (ertz gardena moztu ondoren)
+  eguzkilore_win: 80,
 };
 const SPRITE_FALLBACK_ASPECT = {
   player: 120 / 160,
@@ -728,7 +728,8 @@ function render() {
     const eguBox = spriteBox('eguzkilore', SPRITE_TARGET_H.eguzkilore_win, SPRITE_FALLBACK_ASPECT.eguzkilore_win);
     const eguW = eguBox.w, eguH = eguBox.h;
     const eguX = winSeq.stoneX + stoneW / 2 - eguW / 2;
-    const eguY = stoneY - eguH * 0.75;
+    // harriaren goiko aurpegiaren gainean bermatuta
+    const eguY = stoneY + stoneH * 0.15 - eguH;
     const pulse = 0.5 + 0.5 * Math.sin(performance.now() / 180);
     ctx.save();
     ctx.globalAlpha = 0.35 + pulse * 0.35;
@@ -1021,7 +1022,7 @@ loadAssets((done, total) => {
   document.getElementById('loading-bar-fill').style.width = pct + '%';
   document.getElementById('loading-percent').textContent = pct + '%';
 }).then(() => {
-  ['root_1', 'root_2', 'root_3'].forEach(trimTransparent);
+  ['root_1', 'root_2', 'root_3', 'stone'].forEach(trimTransparent);
   computeSpriteSizes();
   assetsReady = true;
   prewarmCaches();
