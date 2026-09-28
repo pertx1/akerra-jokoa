@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="eu">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>AKERRA JOKOA — Etxea zaintzen</title>
+<meta name="description" content="AKERRA jantzien mini-jokoa: iheslari bat basoan, sorginari ihes eginez. Jolastu eta irabazi deskontu-kode bat.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Uncial+Antiqua&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div id="app">
+
+  <!-- PANTALLA DE CARGA -->
+  <div id="screen-loading" class="screen active">
+    <div class="loading-box">
+      <div class="loading-logo-wrap">
+        <img id="loading-logo" alt="AKERRA" class="loading-logo">
+      </div>
+      <p class="loading-text">Kargatzen…</p>
+      <div class="loading-bar-track">
+        <div id="loading-bar-fill" class="loading-bar-fill"></div>
+      </div>
+      <p id="loading-percent" class="loading-percent">0%</p>
+    </div>
+  </div>
+
+  <!-- ROTAR MÓVIL -->
+  <div id="screen-rotate" class="screen">
+    <div class="rotate-box">
+      <div class="rotate-emoji">🔄</div>
+      <p>Biratu mugikorra</p>
+    </div>
+  </div>
+
+  <!-- INICIO -->
+  <div id="screen-start" class="screen">
+    <div class="bg-dim"></div>
+    <button id="btn-mute" class="mute-btn" aria-label="Soinua">🔊</button>
+    <div class="start-content">
+      <img id="start-logo" alt="AKERRA" class="brand-logo">
+      <h1 class="title-font">ETXEA ZAINTZEN</h1>
+      <p class="subtitle-font">egunsentia heldu arte</p>
+      <button id="btn-start" class="btn-primary">HASI</button>
+      <p class="hint-text">Sakatu pantaila edo zuriune-tekla jauzi egiteko</p>
+    </div>
+  </div>
+
+  <!-- JUEGO -->
+  <div id="screen-game" class="screen">
+    <button id="btn-mute-game" class="mute-btn" aria-label="Soinua">🔊</button>
+    <div class="hud">
+      <div class="progress-track">
+        <div id="progress-fill" class="progress-fill"></div>
+        <img id="progress-eguzkilore" class="progress-eguzkilore" alt="">
+      </div>
+    </div>
+    <canvas id="game-canvas"></canvas>
+  </div>
+
+  <!-- DERROTA -->
+  <div id="screen-lose" class="screen">
+    <div class="bg-dim"></div>
+    <div class="center-content">
+      <h2 class="title-font lose-title">Sorginak harrapatu zaitu!</h2>
+      <button id="btn-retry" class="btn-primary">SAIATU BERRIRO</button>
+    </div>
+  </div>
+
+  <!-- PREMIO -->
+  <div id="screen-prize" class="screen">
+    <div class="bg-dim"></div>
+    <div class="prize-content">
+      <h2 class="title-font">AUKERATU ZUREA</h2>
+
+      <div id="prize-choices" class="prize-choices">
+        <button class="eguzkilore-choice" data-idx="0" aria-label="Eguzkilorea 1">
+          <img src="assets/items/eguzkilore.png" alt="">
+        </button>
+        <button class="eguzkilore-choice" data-idx="1" aria-label="Eguzkilorea 2">
+          <img src="assets/items/eguzkilore.png" alt="">
+        </button>
+        <button class="eguzkilore-choice" data-idx="2" aria-label="Eguzkilorea 3">
+          <img src="assets/items/eguzkilore.png" alt="">
+        </button>
+      </div>
+
+      <div id="prize-result" class="prize-result">
+        <p class="prize-label">Zure deskontu kodea:</p>
+        <p id="prize-code" class="prize-code">------</p>
+        <button id="btn-copy" class="btn-secondary">KOPIATU</button>
+        <p class="prize-note">Erabili akerra.eus-en</p>
+        <button id="btn-shop" class="btn-primary">DENDARA JOAN</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script src="game.js"></script>
+</body>
+</html>
