@@ -90,7 +90,7 @@ const scaledCache = new Map();
 function scaledSprite(key, w, h) {
   const img = assets[key];
   if (!img) return null;
-  const dpr = window.devicePixelRatio || 1;
+  const dpr = renderScale;
   const pw = Math.max(1, Math.round(w * dpr));
   const ph = Math.max(1, Math.round(h * dpr));
   const id = key + '|' + pw + 'x' + ph;
@@ -298,7 +298,12 @@ window.addEventListener('orientationchange', () => { resizeCanvas(); checkOrient
    ========================================================= */
 const canvas = document.getElementById('game-canvas');
 const ctx = canvas.getContext('2d');
-let LOGICAL_W = 960, LOGICAL_H = 540;
+// Jokoa beti 960x540 bereizmen logikoan marrazten da eta pantailara eskalatzen
+// da. Horrela tamainak, jauzia eta abiadura proportzio berean ikusten dira
+// mugikorrean zein pantaila handian.
+const LOGICAL_W = 960, LOGICAL_H = 540;
+// pixel fisikoak unitate logiko bakoitzeko (eskala x devicePixelRatio)
+let renderScale = 1;
 let lastSizeKey = '';
 let assetsReady = false;
 let groundStrip = null; // { canvas, w, h } — lurzoruaren zinta aurrez marraztuta
@@ -318,11 +323,10 @@ function resizeCanvas() {
   const dpr = window.devicePixelRatio || 1;
   canvas.width = Math.round(w * dpr);
   canvas.height = Math.round(h * dpr);
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  LOGICAL_W = w;
-  LOGICAL_H = h;
+  renderScale = canvas.width / LOGICAL_W;
+  ctx.setTransform(renderScale, 0, 0, renderScale, 0, 0);
 
-  const sizeKey = w + 'x' + h + '@' + dpr;
+  const sizeKey = canvas.width + 'x' + canvas.height;
   if (sizeKey !== lastSizeKey) {
     lastSizeKey = sizeKey;
     scaledCache.clear();
@@ -641,7 +645,7 @@ function update(dt) {
 function buildGroundStrip(h) {
   const img = assets.ground;
   const aspect = img ? imgWidth(img) / imgHeight(img) : 1280 / 220;
-  const dpr = window.devicePixelRatio || 1;
+  const dpr = renderScale;
   const tilePw = Math.max(1, Math.round(h * aspect * GROUND_WIDTH_SCALE * dpr));
   const ph = Math.max(1, Math.round(h * dpr));
   const c = document.createElement('canvas');
@@ -663,7 +667,7 @@ function buildGroundStrip(h) {
 
 function drawGround(offset, y, h) {
   if (!groundStrip || groundStrip.h !== h) buildGroundStrip(h);
-  const dpr = window.devicePixelRatio || 1;
+  const dpr = renderScale;
   const period = groundStrip.w;
   // pixel osoetara biribildu, kopien arteko juntura-lerro finik ez agertzeko
   let x = Math.round(-(offset % period) * dpr) / dpr;
