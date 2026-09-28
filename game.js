@@ -325,6 +325,18 @@ const SPRITE_FALLBACK_ASPECT = {
   stone: 130 / 110,
   eguzkilore_win: 1,
 };
+// Oztopoaren marrazkia bakarrik handitzen du (lurrean bermatuta), talka-kaxa
+// aldatu gabe. root_2 arku mehe eta hutsa da: handiago marraztuta, bere
+// talka-kaxa betetzen du eta ez da ikusten dena baino handiagoa.
+const OBSTACLE_DRAW_SCALE = {
+  root_2: 1.35,
+};
+
+function obstacleDrawBox(type) {
+  const base = spriteBox(type, SPRITE_TARGET_H[type], SPRITE_FALLBACK_ASPECT[type]);
+  const s = OBSTACLE_DRAW_SCALE[type] || 1;
+  return { base, dw: base.w * s, dh: base.h * s };
+}
 
 const player = {
   w: 120, h: 160,
@@ -350,7 +362,11 @@ function prewarmCaches() {
   ['player_run_1', 'player_run_2', 'player_run_3', 'player_run_4', 'player_run_5',
     'player_run_6', 'player_jump', 'player_win'].forEach((k) => scaledSprite(k, player.w, player.h));
   scaledSprite('witch', witch.w, witch.h);
-  ['root_1', 'root_2', 'root_3', 'stone', 'eguzkilore_win'].forEach((k) => {
+  ['root_1', 'root_2', 'root_3'].forEach((k) => {
+    const { dw, dh } = obstacleDrawBox(k);
+    scaledSprite(k, dw, dh);
+  });
+  ['stone', 'eguzkilore_win'].forEach((k) => {
     const imgKey = k === 'eguzkilore_win' ? 'eguzkilore' : k;
     const box = spriteBox(imgKey, SPRITE_TARGET_H[k], SPRITE_FALLBACK_ASPECT[k]);
     scaledSprite(imgKey, box.w, box.h);
@@ -412,13 +428,15 @@ function jump() {
 function spawnObstacle() {
   const types = ['root_1', 'root_2', 'root_3'];
   const type = types[Math.floor(Math.random() * types.length)];
-  const size = spriteBox(type, SPRITE_TARGET_H[type], SPRITE_FALLBACK_ASPECT[type]);
+  const { base, dw, dh } = obstacleDrawBox(type);
   obstacles.push({
     type,
     x: LOGICAL_W + 20,
-    w: size.w,
-    h: size.h,
-    y: getGroundY() - size.h + GROUND_OVERLAP,
+    w: base.w,
+    h: base.h,
+    y: getGroundY() - base.h + GROUND_OVERLAP,
+    dw,
+    dh,
   });
 }
 
@@ -518,7 +536,7 @@ function update(dt) {
     for (const o of obstacles) {
       o.x -= currentSpeed * dt;
     }
-    obstacles = obstacles.filter((o) => o.x + o.w > -20);
+    obstacles = obstacles.filter((o) => o.x + o.w + (o.dw - o.w) / 2 > -20);
 
     if (checkCollisions()) {
       triggerHit();
@@ -642,7 +660,8 @@ function render() {
 
   // oztopoak
   for (const o of obstacles) {
-    drawSprite(ctx, o.type, o.x, o.y, o.w, o.h);
+    // centratuta horizontalki eta behealdea talka-kaxaren behealdearekin lerrokatuta
+    drawSprite(ctx, o.type, o.x - (o.dw - o.w) / 2, o.y + o.h - o.dh, o.dw, o.dh);
   }
 
   // harria + eguzkilorea (irabazte-sekuentzia)
