@@ -344,7 +344,7 @@ let elapsed = 0;
 let lastTime = 0;
 
 const GROUND_H_RATIO = 0.22;
-const PLAYER_X_RATIO = 0.25;
+const PLAYER_X_RATIO = 0.33;
 // Lurzoruan bermatzen diren elementuak (oztopoak, harria) pixel hauek
 // hondoratzen dira lurzoruan, airean flotatu beharrean gainean egon daitezen
 const GROUND_OVERLAP = 16;
@@ -357,7 +357,7 @@ const GROUND_WIDTH_SCALE = 2.0;
 // distortsiorik ez izateko, edozein dela ere ordezkatuko duen artea.
 const SPRITE_TARGET_H = {
   player: 160,
-  witch: 170,
+  witch: 130,
   stone: 110,
   eguzkilore_win: 70,
 };
@@ -396,8 +396,12 @@ const player = {
   state: 'run', // run | jump | win
 };
 
+// Sorginaren eskuinaldearen eta jokalariaren arteko tartea (px logiko):
+// korrika dauden bitartean ez dira inoiz ukitzen
+const WITCH_GAP = 80;
+
 const witch = {
-  x: 40, y: 0, w: 150, h: 170,
+  x: 0, y: 0, w: 150, h: 170,
   bobT: Math.random() * Math.PI * 2,
   fleeing: false,
   alpha: 1,
@@ -460,7 +464,7 @@ function resetGame() {
   witch.alpha = 1;
   witch.lungeActive = false;
   witch.lungeT = 0;
-  witch.x = 40;
+  witch.x = LOGICAL_W * PLAYER_X_RATIO - WITCH_GAP - witch.w;
   winSeq = null;
   progressFillEl.style.width = '0%';
 }
@@ -597,7 +601,9 @@ function update(dt) {
     }
   } else if (gameState === 'hit') {
     witch.lungeT += dt;
-    witch.x += 900 * dt;
+    // jokalaria harrapatzen du (eskuak gainean), ez du zeharkatzen
+    const grabX = LOGICAL_W * PLAYER_X_RATIO + 20 - witch.w;
+    witch.x = Math.min(grabX, witch.x + 900 * dt);
     witch.bobT += dt * 6;
     witch.y = LOGICAL_H * 0.18 + Math.sin(witch.bobT) * 10;
     if (witch.lungeT >= 0.55) {
