@@ -3,6 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="AKERRA">
+<meta name="theme-color" content="#0b0f0a">
 <title>AKERRA JOKOA — Etxea zaintzen</title>
 <meta name="description" content="AKERRA jantzien mini-jokoa: iheslari bat basoan, sorginari ihes eginez. Jolastu eta irabazi deskontu-kode bat.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -39,7 +44,10 @@
   <!-- INICIO -->
   <div id="screen-start" class="screen">
     <div class="bg-dim"></div>
-    <button id="btn-mute" class="mute-btn" aria-label="Soinua">🔊</button>
+    <div class="top-controls">
+      <button id="btn-fullscreen" class="icon-btn fullscreen-btn" aria-label="Pantaila osoa">⤢</button>
+      <button id="btn-mute" class="icon-btn mute-btn" aria-label="Soinua">🔊</button>
+    </div>
     <div class="start-content">
       <img id="start-logo" alt="AKERRA" class="brand-logo">
       <h1 class="title-font">ETXEA ZAINTZEN</h1>
@@ -51,7 +59,10 @@
 
   <!-- JUEGO -->
   <div id="screen-game" class="screen">
-    <button id="btn-mute-game" class="mute-btn" aria-label="Soinua">🔊</button>
+    <div class="top-controls">
+      <button id="btn-fullscreen-game" class="icon-btn fullscreen-btn" aria-label="Pantaila osoa">⤢</button>
+      <button id="btn-mute-game" class="icon-btn mute-btn" aria-label="Soinua">🔊</button>
+    </div>
     <div class="hud">
       <div class="progress-track">
         <div id="progress-fill" class="progress-fill"></div>

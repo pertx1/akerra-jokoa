@@ -673,9 +673,56 @@ document.getElementById('btn-retry').addEventListener('click', () => {
   showScreen('game');
 });
 
+// Botoiak klikatu ondoren fokua kentzen diegu, bestela zuriune-teklak
+// botoia berriz aktibatuko luke jauzi egin beharrean
 ['btn-mute', 'btn-mute-game'].forEach((id) => {
-  document.getElementById(id).addEventListener('click', () => setMuted(!muted));
+  const btn = document.getElementById(id);
+  btn.addEventListener('click', () => { setMuted(!muted); btn.blur(); });
 });
+
+/* =========================================================
+   Pantaila osoa
+   ========================================================= */
+const docEl = document.documentElement;
+const fullscreenSupported = !!(document.fullscreenEnabled || document.webkitFullscreenEnabled);
+
+function isFullscreen() {
+  return !!(document.fullscreenElement || document.webkitFullscreenElement);
+}
+
+function toggleFullscreen() {
+  try {
+    if (isFullscreen()) {
+      const exit = document.exitFullscreen || document.webkitExitFullscreen;
+      const p = exit.call(document);
+      if (p && p.catch) p.catch(() => {});
+    } else {
+      const req = docEl.requestFullscreen || docEl.webkitRequestFullscreen;
+      const p = req.call(docEl);
+      if (p && p.catch) p.catch(() => {});
+    }
+  } catch (e) { /* nabigatzaileak ukatu du: ez apurtu jokoa */ }
+}
+
+function updateFullscreenButtons() {
+  const on = isFullscreen();
+  document.querySelectorAll('.fullscreen-btn').forEach((b) => {
+    b.textContent = on ? '⤡' : '⤢';
+    b.setAttribute('aria-label', on ? 'Irten pantaila osotik' : 'Pantaila osoa');
+  });
+}
+
+['btn-fullscreen', 'btn-fullscreen-game'].forEach((id) => {
+  const btn = document.getElementById(id);
+  if (!fullscreenSupported) {
+    btn.style.display = 'none';
+    return;
+  }
+  btn.addEventListener('click', () => { toggleFullscreen(); btn.blur(); });
+});
+
+document.addEventListener('fullscreenchange', updateFullscreenButtons);
+document.addEventListener('webkitfullscreenchange', updateFullscreenButtons);
 
 document.addEventListener('pointerdown', startMusicOnce, { once: true });
 document.addEventListener('keydown', startMusicOnce, { once: true });
