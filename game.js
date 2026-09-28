@@ -131,14 +131,58 @@ function drawSprite(ctx, key, x, y, w, h, opts) {
   ctx.restore();
 }
 
+// Irudiaren inguruko ertz garden hutsa mozten du, marrazki erreala bakarrik
+// gera dadin (adib. root_3 2000x2000 fitxategi baten erdian dago). Horrela
+// tamainak marrazkiari dagozkio, ez fitxategiari.
+function trimTransparent(key) {
+  const img = assets[key];
+  if (!img) return;
+  try {
+    const sw = imgWidth(img), sh = imgHeight(img);
+    // eskala txikian bilatu (azkarragoa), gero jatorrizkotik moztu
+    const k = Math.min(1, 512 / Math.max(sw, sh));
+    const tw = Math.max(1, Math.round(sw * k)), th = Math.max(1, Math.round(sh * k));
+    const probe = document.createElement('canvas');
+    probe.width = tw;
+    probe.height = th;
+    const pctx = probe.getContext('2d');
+    pctx.drawImage(img, 0, 0, tw, th);
+    const data = pctx.getImageData(0, 0, tw, th).data;
+    let minX = tw, minY = th, maxX = -1, maxY = -1;
+    for (let y = 0; y < th; y++) {
+      for (let x = 0; x < tw; x++) {
+        if (data[(y * tw + x) * 4 + 3] > 20) {
+          if (x < minX) minX = x;
+          if (x > maxX) maxX = x;
+          if (y < minY) minY = y;
+          if (y > maxY) maxY = y;
+        }
+      }
+    }
+    if (maxX < 0) return;
+    const cx = Math.max(0, Math.floor((minX - 1) / k));
+    const cy = Math.max(0, Math.floor((minY - 1) / k));
+    const cw = Math.min(sw, Math.ceil((maxX + 2) / k)) - cx;
+    const ch = Math.min(sh, Math.ceil((maxY + 2) / k)) - cy;
+    if (cw >= sw * 0.98 && ch >= sh * 0.98) return; // ia ez dago ertzik
+    const out = document.createElement('canvas');
+    out.width = cw;
+    out.height = ch;
+    out.getContext('2d').drawImage(img, cx, cy, cw, ch, 0, 0, cw, ch);
+    assets[key] = out;
+  } catch (e) { /* adib. file:// bidez irekita: irudia den bezala erabili */ }
+}
+
+// Irudiak (img) edo moztutako canvas-ak (neurri naturalik gabe)
+function imgWidth(img) { return img.naturalWidth || img.width; }
+function imgHeight(img) { return img.naturalHeight || img.height; }
+
 // Baliabidearen benetako neurriaren arabera kalkulatzen du zabalera,
 // altuera helburu bat emanda (proportzioak ez distortsionatzeko,
 // bg_forest/ground-ek dagoeneko egiten duten bezala)
 function spriteBox(key, targetH, fallbackAspect) {
   const img = assets[key];
-  const aspect = (img && img.naturalWidth && img.naturalHeight)
-    ? img.naturalWidth / img.naturalHeight
-    : fallbackAspect;
+  const aspect = img ? imgWidth(img) / imgHeight(img) : fallbackAspect;
   return { w: targetH * aspect, h: targetH };
 }
 
@@ -311,8 +355,6 @@ const SPRITE_TARGET_H = {
   player: 160,
   witch: 170,
   root_1: 60,
-  root_2: 70,
-  root_3: 80,
   stone: 110,
   eguzkilore_win: 70,
 };
@@ -325,17 +367,14 @@ const SPRITE_FALLBACK_ASPECT = {
   stone: 130 / 110,
   eguzkilore_win: 1,
 };
-// Oztopoaren marrazkia bakarrik handitzen du (lurrean bermatuta), talka-kaxa
-// aldatu gabe. root_2 arku mehe eta hutsa da: handiago marraztuta, bere
-// talka-kaxa betetzen du eta ez da ikusten dena baino handiagoa.
-const OBSTACLE_DRAW_SCALE = {
-  root_2: 1.35,
-};
-
-function obstacleDrawBox(type) {
-  const base = spriteBox(type, SPRITE_TARGET_H[type], SPRITE_FALLBACK_ASPECT[type]);
-  const s = OBSTACLE_DRAW_SCALE[type] || 1;
-  return { base, dw: base.w * s, dh: base.h * s };
+// Sustrai guztiak root_1-en zabalera berarekin marrazten dira; altuera
+// bakoitzaren proportziotik ateratzen da. Horrela hirurak tamaina bertsukoak
+// ikusten dira, marrazkien forma ezberdina izan arren.
+function obstacleBox(type) {
+  const ref = spriteBox('root_1', SPRITE_TARGET_H.root_1, SPRITE_FALLBACK_ASPECT.root_1);
+  const img = assets[type];
+  const aspect = img ? imgWidth(img) / imgHeight(img) : SPRITE_FALLBACK_ASPECT[type];
+  return { w: ref.w, h: ref.w / aspect };
 }
 
 const player = {
@@ -363,8 +402,8 @@ function prewarmCaches() {
     'player_run_6', 'player_jump', 'player_win'].forEach((k) => scaledSprite(k, player.w, player.h));
   scaledSprite('witch', witch.w, witch.h);
   ['root_1', 'root_2', 'root_3'].forEach((k) => {
-    const { dw, dh } = obstacleDrawBox(k);
-    scaledSprite(k, dw, dh);
+    const box = obstacleBox(k);
+    scaledSprite(k, box.w, box.h);
   });
   ['stone', 'eguzkilore_win'].forEach((k) => {
     const imgKey = k === 'eguzkilore_win' ? 'eguzkilore' : k;
@@ -428,15 +467,13 @@ function jump() {
 function spawnObstacle() {
   const types = ['root_1', 'root_2', 'root_3'];
   const type = types[Math.floor(Math.random() * types.length)];
-  const { base, dw, dh } = obstacleDrawBox(type);
+  const size = obstacleBox(type);
   obstacles.push({
     type,
     x: LOGICAL_W + 20,
-    w: base.w,
-    h: base.h,
-    y: getGroundY() - base.h + GROUND_OVERLAP,
-    dw,
-    dh,
+    w: size.w,
+    h: size.h,
+    y: getGroundY() - size.h + GROUND_OVERLAP,
   });
 }
 
@@ -536,7 +573,7 @@ function update(dt) {
     for (const o of obstacles) {
       o.x -= currentSpeed * dt;
     }
-    obstacles = obstacles.filter((o) => o.x + o.w + (o.dw - o.w) / 2 > -20);
+    obstacles = obstacles.filter((o) => o.x + o.w > -20);
 
     if (checkCollisions()) {
       triggerHit();
@@ -603,7 +640,7 @@ function update(dt) {
 // kopiatzea besterik ez da behar (eskalatu edo biratu gabe).
 function buildGroundStrip(h) {
   const img = assets.ground;
-  const aspect = img ? img.naturalWidth / img.naturalHeight : 1280 / 220;
+  const aspect = img ? imgWidth(img) / imgHeight(img) : 1280 / 220;
   const dpr = window.devicePixelRatio || 1;
   const tilePw = Math.max(1, Math.round(h * aspect * GROUND_WIDTH_SCALE * dpr));
   const ph = Math.max(1, Math.round(h * dpr));
@@ -660,8 +697,7 @@ function render() {
 
   // oztopoak
   for (const o of obstacles) {
-    // centratuta horizontalki eta behealdea talka-kaxaren behealdearekin lerrokatuta
-    drawSprite(ctx, o.type, o.x - (o.dw - o.w) / 2, o.y + o.h - o.dh, o.dw, o.dh);
+    drawSprite(ctx, o.type, o.x, o.y, o.w, o.h);
   }
 
   // harria + eguzkilorea (irabazte-sekuentzia)
@@ -967,6 +1003,7 @@ loadAssets((done, total) => {
   document.getElementById('loading-bar-fill').style.width = pct + '%';
   document.getElementById('loading-percent').textContent = pct + '%';
 }).then(() => {
+  ['root_1', 'root_2', 'root_3'].forEach(trimTransparent);
   computeSpriteSizes();
   assetsReady = true;
   prewarmCaches();
