@@ -106,6 +106,39 @@ function drawSprite(ctx, key, x, y, w, h, opts) {
   ctx.restore();
 }
 
+// Baliabidearen benetako neurriaren arabera kalkulatzen du zabalera,
+// altuera helburu bat emanda (proportzioak ez distortsionatzeko,
+// bg_forest/ground-ek dagoeneko egiten duten bezala)
+function spriteBox(key, targetH, fallbackAspect) {
+  const img = assets[key];
+  const aspect = (img && img.naturalWidth && img.naturalHeight)
+    ? img.naturalWidth / img.naturalHeight
+    : fallbackAspect;
+  return { w: targetH * aspect, h: targetH };
+}
+
+// Sorgina marrazten du, beheko %35a gardenago utziz. Iturburuko irudia
+// bi zerrendatan ebakita marrazten da (ez irudia osoa bikoiztuta), horrela
+// artelana ez da bikoiztu edo distortsionatzen.
+function drawWitch() {
+  const img = assets.witch;
+  const splitRatio = 0.65;
+  if (img) {
+    const sw = img.naturalWidth;
+    const sh = img.naturalHeight;
+    const splitY = sh * splitRatio;
+    ctx.save();
+    ctx.globalAlpha = witch.alpha;
+    ctx.drawImage(img, 0, 0, sw, splitY, witch.x, witch.y, witch.w, witch.h * splitRatio);
+    ctx.globalAlpha = witch.alpha * 0.5;
+    ctx.drawImage(img, 0, splitY, sw, sh - splitY, witch.x, witch.y + witch.h * splitRatio, witch.w, witch.h * (1 - splitRatio));
+    ctx.restore();
+  } else {
+    drawSprite(ctx, 'witch', witch.x, witch.y, witch.w, witch.h * splitRatio, { alpha: witch.alpha });
+    drawSprite(ctx, 'witch', witch.x, witch.y + witch.h * splitRatio, witch.w, witch.h * (1 - splitRatio), { alpha: witch.alpha * 0.5 });
+  }
+}
+
 /* =========================================================
    Soinua
    ========================================================= */
@@ -228,6 +261,28 @@ let lastTime = 0;
 const GROUND_H_RATIO = 0.22;
 const PLAYER_X_RATIO = 0.25;
 
+// Sprite bakoitzaren helburu-altuera (px logiko), zabalera irudi
+// bakoitzaren benetako proportziotik kalkulatzen da (spriteBox bidez)
+// distortsiorik ez izateko, edozein dela ere ordezkatuko duen artea.
+const SPRITE_TARGET_H = {
+  player: 160,
+  witch: 170,
+  root_1: 60,
+  root_2: 70,
+  root_3: 80,
+  stone: 110,
+  eguzkilore_win: 70,
+};
+const SPRITE_FALLBACK_ASPECT = {
+  player: 120 / 160,
+  witch: 150 / 170,
+  root_1: 1,
+  root_2: 80 / 70,
+  root_3: 100 / 80,
+  stone: 130 / 110,
+  eguzkilore_win: 1,
+};
+
 const player = {
   w: 120, h: 160,
   y: 0, vy: 0,
@@ -245,6 +300,13 @@ const witch = {
   lungeActive: false,
   lungeT: 0,
 };
+
+function computeSpriteSizes() {
+  const p = spriteBox('player_run_1', SPRITE_TARGET_H.player, SPRITE_FALLBACK_ASPECT.player);
+  player.w = p.w; player.h = p.h;
+  const w = spriteBox('witch', SPRITE_TARGET_H.witch, SPRITE_FALLBACK_ASPECT.witch);
+  witch.w = w.w; witch.h = w.h;
+}
 
 let obstacles = [];
 let nextSpawnIn = 1.2;
@@ -293,12 +355,7 @@ function jump() {
 function spawnObstacle() {
   const types = ['root_1', 'root_2', 'root_3'];
   const type = types[Math.floor(Math.random() * types.length)];
-  const sizes = {
-    root_1: { w: 60, h: 60 },
-    root_2: { w: 80, h: 70 },
-    root_3: { w: 100, h: 80 },
-  };
-  const size = sizes[type];
+  const size = spriteBox(type, SPRITE_TARGET_H[type], SPRITE_FALLBACK_ASPECT[type]);
   obstacles.push({
     type,
     x: LOGICAL_W + 20,
@@ -495,14 +552,10 @@ function render() {
   const groundH = LOGICAL_H * GROUND_H_RATIO;
   drawParallaxLayer('ground', groundOffset, LOGICAL_H - groundH, groundH, 1);
 
-  // sorgina
+  // sorgina (beheko zatia gardenagoa: iturburuko irudia bi zerrendatan
+  // ebaki eta bakoitza bere lekuan marrazten dugu, irudia bikoiztu gabe)
   if (witch.alpha > 0) {
-    ctx.save();
-    ctx.globalAlpha = witch.alpha;
-    // beheko zatia gardenagoa: gradiente bidez simulatzen dugu bi zatitan marraztuz
-    drawSprite(ctx, 'witch', witch.x, witch.y, witch.w, witch.h * 0.65, { alpha: witch.alpha });
-    drawSprite(ctx, 'witch', witch.x, witch.y + witch.h * 0.65, witch.w, witch.h * 0.35, { alpha: witch.alpha * 0.5 });
-    ctx.restore();
+    drawWitch();
   }
 
   // oztopoak
@@ -512,22 +565,24 @@ function render() {
 
   // harria + eguzkilorea (irabazte-sekuentzia)
   if (gameState === 'winSeq' && winSeq) {
-    const stoneW = 130, stoneH = 110;
+    const stoneBox = spriteBox('stone', SPRITE_TARGET_H.stone, SPRITE_FALLBACK_ASPECT.stone);
+    const stoneW = stoneBox.w, stoneH = stoneBox.h;
     const stoneY = getGroundY() - stoneH;
     drawSprite(ctx, 'stone', winSeq.stoneX, stoneY, stoneW, stoneH);
 
-    const eguW = 70;
+    const eguBox = spriteBox('eguzkilore', SPRITE_TARGET_H.eguzkilore_win, SPRITE_FALLBACK_ASPECT.eguzkilore_win);
+    const eguW = eguBox.w, eguH = eguBox.h;
     const eguX = winSeq.stoneX + stoneW / 2 - eguW / 2;
-    const eguY = stoneY - eguW * 0.75;
+    const eguY = stoneY - eguH * 0.75;
     const pulse = 0.5 + 0.5 * Math.sin(performance.now() / 180);
     ctx.save();
     ctx.globalAlpha = 0.35 + pulse * 0.35;
     ctx.fillStyle = '#e0a83c';
     ctx.beginPath();
-    ctx.arc(eguX + eguW / 2, eguY + eguW / 2, eguW * (0.7 + pulse * 0.25), 0, Math.PI * 2);
+    ctx.arc(eguX + eguW / 2, eguY + eguH / 2, Math.max(eguW, eguH) * (0.7 + pulse * 0.25), 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
-    drawSprite(ctx, 'eguzkilore', eguX, eguY, eguW, eguW);
+    drawSprite(ctx, 'eguzkilore', eguX, eguY, eguW, eguH);
   }
 
   // jokalaria
@@ -764,6 +819,7 @@ loadAssets((done, total) => {
   document.getElementById('loading-bar-fill').style.width = pct + '%';
   document.getElementById('loading-percent').textContent = pct + '%';
 }).then(() => {
+  computeSpriteSizes();
   setTimeout(() => {
     showScreen('start');
   }, 250);
