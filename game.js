@@ -478,12 +478,18 @@ function drawParallaxLayer(key, offset, y, h, speedFactor) {
   }
 }
 
+// bg_forest ez da seamless-a (eszena finko bat da, ez textura errepikagarria),
+// beraz behin bakarrik marrazten da, errepikatu gabe, "biraka" itxura saihesteko
+function drawStaticBackground(key, y, h) {
+  drawSprite(ctx, key, 0, y, LOGICAL_W, h);
+}
+
 function render() {
   ctx.clearRect(0, 0, LOGICAL_W, LOGICAL_H);
 
   // zerua / basoa
   const bgH = LOGICAL_H;
-  drawParallaxLayer('bg_forest', bgOffset, 0, bgH, 0.3);
+  drawStaticBackground('bg_forest', 0, bgH);
 
   // lurzorua
   const groundH = LOGICAL_H * GROUND_H_RATIO;
