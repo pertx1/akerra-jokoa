@@ -273,6 +273,7 @@ function showScreen(name) {
     if (!el) return;
     el.classList.toggle('active', key === name || (key === 'rotate' && false));
   });
+  if (name === 'game') resizeCanvas(); // HUD-a botoien tamaina errealarekin lerrokatzeko
   checkOrientation();
 }
 
@@ -308,6 +309,23 @@ let lastSizeKey = '';
 let assetsReady = false;
 const strips = new Map(); // gakoa -> { canvas, w, h }, aurrez marraztutako zintak
 
+// Progresio-barra canvas-aren barruan geratzen da (bandak beltzak daudenean
+// ez da haietara irteten), eta goiko botoiekin ez da gainjartzen.
+function alignHud(containerW, canvasW) {
+  const hud = document.querySelector('#screen-game .hud');
+  const controls = document.querySelector('#screen-game .top-controls');
+  if (!hud) return;
+  const canvasLeft = (containerW - canvasW) / 2;
+  const left = canvasLeft + 16;
+  const controlsLeft = controls ? containerW - 14 - controls.offsetWidth : containerW;
+  const right = Math.min(canvasLeft + canvasW - 16, controlsLeft - 24);
+  const width = Math.max(80, Math.min(640, right - left));
+  hud.style.left = (left + Math.max(0, (right - left - width) / 2)) + 'px';
+  hud.style.width = width + 'px';
+  hud.style.right = 'auto';
+  hud.style.margin = '0';
+}
+
 function resizeCanvas() {
   const container = screens.game;
   const maxW = container.clientWidth || window.innerWidth;
@@ -320,6 +338,7 @@ function resizeCanvas() {
   }
   canvas.style.width = w + 'px';
   canvas.style.height = h + 'px';
+  alignHud(maxW, w);
   const dpr = window.devicePixelRatio || 1;
   canvas.width = Math.round(w * dpr);
   canvas.height = Math.round(h * dpr);
@@ -982,7 +1001,7 @@ function loop(ts) {
   lastTime = ts;
   if (dt > 0.05) dt = 0.05; // saltoak saihesteko (tab atzeko planoan, etab.)
 
-  if (currentScreen !== 'game' || paused) return;
+  if (currentScreen !== 'game' || paused || fsHelpOpen) return;
 
   update(dt);
   render();
@@ -993,7 +1012,7 @@ requestAnimationFrame(loop);
    Kontrolak
    ========================================================= */
 function handleJumpInput(e) {
-  if (currentScreen !== 'game') return;
+  if (currentScreen !== 'game' || fsHelpOpen) return;
   if (e) e.preventDefault();
   jump();
 }
@@ -1060,13 +1079,32 @@ function updateFullscreenButtons() {
   });
 }
 
+// Hasierako pantailatik irekitako web-app gisa (iPhone / Android), dagoeneko
+// pantaila osoan gaude: botoia ez da behar.
+const isStandalone = window.navigator.standalone === true ||
+  (window.matchMedia && (window.matchMedia('(display-mode: fullscreen)').matches ||
+    window.matchMedia('(display-mode: standalone)').matches));
+
+// iPhone-ko Safarik ez du Fullscreen API-rik elementuentzat: botoiak
+// laguntza-leiho bat erakusten du (Gehitu hasierako pantailan / ezkutatu barra).
+const fsHelp = document.getElementById('fs-help');
+let fsHelpOpen = false;
+function openFsHelp() { fsHelpOpen = true; fsHelp.classList.add('visible'); }
+function closeFsHelp() { fsHelpOpen = false; fsHelp.classList.remove('visible'); lastTime = 0; }
+document.getElementById('fs-help-close').addEventListener('click', (e) => { closeFsHelp(); e.currentTarget.blur(); });
+fsHelp.addEventListener('pointerdown', (e) => { if (e.target === fsHelp) closeFsHelp(); });
+
 ['btn-fullscreen', 'btn-fullscreen-game'].forEach((id) => {
   const btn = document.getElementById(id);
-  if (!fullscreenSupported) {
+  if (isStandalone) {
     btn.style.display = 'none';
     return;
   }
-  btn.addEventListener('click', () => { toggleFullscreen(); btn.blur(); });
+  btn.addEventListener('click', () => {
+    if (fullscreenSupported) toggleFullscreen();
+    else openFsHelp();
+    btn.blur();
+  });
 });
 
 document.addEventListener('fullscreenchange', updateFullscreenButtons);

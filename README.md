@@ -43,6 +43,15 @@ Ondoren ireki `http://localhost:8000` nabigatzailean.
 - `SHOP_URL`: "DENDARA JOAN" botoiak irekitzen duen esteka.
 - `PRIZES`: sarien zerrenda pisu bakoitzarekin (portzentajezko probabilitatea).
 
+## Pantaila osoa mugikorrean
+
+- **Android / ordenagailua:** ⤢ botoiak pantaila osoa jartzen du zuzenean.
+- **iPhone:** Safarik ez du uzten botoi batetik pantaila osoa jartzen, beraz
+  ⤢ botoiak laguntza-leiho bat erakusten du: *Partekatu → Gehitu hasierako
+  pantailan* (jokoa ikono horretatik irekitzean barrarik gabe irekitzen da,
+  `manifest.webmanifest`-i esker) edo *aA → Ezkutatu tresna-barra*.
+  Hasierako pantailatik irekitzean botoia ez da agertzen.
+
 ## Argitaratu doan
 
 ### Netlify

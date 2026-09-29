@@ -8,6 +8,8 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="AKERRA">
 <meta name="theme-color" content="#0b0f0a">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="assets/ui/apple-touch-icon.png">
 <title>AKERRA JOKOA — Etxea zaintzen</title>
 <meta name="description" content="AKERRA jantzien mini-jokoa: iheslari bat basoan, sorginari ihes eginez. Jolastu eta irabazi deskontu-kode bat.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -109,6 +111,19 @@
     </div>
   </div>
 
+</div>
+
+<!-- PANTAILA OSOA: iPhone-rako laguntza (Safarik ez du botoitik uzten) -->
+<div id="fs-help" class="fs-help" role="dialog" aria-modal="true" aria-labelledby="fs-help-title">
+  <div class="fs-help-box">
+    <h3 id="fs-help-title" class="title-font">Pantaila osoa</h3>
+    <p>iPhone-n Safarik ez du uzten botoi batetik pantaila osoa jartzen. Bi aukera dituzu:</p>
+    <ol>
+      <li>Sakatu <b>Partekatu</b> <span class="fs-ico">⬆︎</span> eta gero <b>«Gehitu hasierako pantailan»</b>. Ireki jokoa ikono berri horretatik: barrarik gabe irekiko da.</li>
+      <li>Edo sakatu helbide-barraren ezkerreko ikonoa <span class="fs-ico">aA</span> eta aukeratu <b>«Ezkutatu tresna-barra»</b>.</li>
+    </ol>
+    <button id="fs-help-close" class="btn-primary">ADOS</button>
+  </div>
 </div>
 
 <!-- KONFETIA (irabaztean) -->
