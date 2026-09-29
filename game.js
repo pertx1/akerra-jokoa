@@ -473,6 +473,7 @@ function getGroundY() {
 }
 
 function resetGame() {
+  clearConfetti();
   elapsed = 0;
   gameState = 'playing';
   obstacles = [];
@@ -709,6 +710,7 @@ function update(dt) {
         winSeq.phase = 'celebrate';
         winSeq.t = 0;
         player.state = 'win';
+        launchConfetti();
       }
     } else if (winSeq.phase === 'celebrate') {
       if (winSeq.t > 1.0) {
@@ -824,6 +826,134 @@ function render() {
     ctx.fillStyle = '#000';
     ctx.fillRect(0, 0, LOGICAL_W, LOGICAL_H);
     ctx.restore();
+  }
+}
+
+/* =========================================================
+   Konfetia (irabaztean, alboetatik)
+   ========================================================= */
+// Canvas bereizi bat, pantaila osoaren gainean (pointer-events: none), bere
+// begizta propioarekin: sarien pantailan ere jarraitzen du erortzen.
+const confettiCanvas = document.getElementById('confetti-canvas');
+const confettiCtx = confettiCanvas ? confettiCanvas.getContext('2d') : null;
+const CONFETTI_COLORS = ['#e0a83c', '#c4841e', '#f4ead8', '#6b2f8a', '#b45fd6',
+  '#e8433a', '#2fb36b', '#3a8ee8', '#f2d024', '#ff7eb6'];
+const CONFETTI_GRAVITY = 520;   // px/s²
+const CONFETTI_DRAG = 1.6;      // aire-marruskadura (1/s)
+let confetti = [];
+let confettiRunning = false;
+let confettiLast = 0;
+let confettiTimers = [];
+
+function sizeConfettiCanvas() {
+  if (!confettiCanvas) return;
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const w = Math.round(window.innerWidth * dpr);
+  const h = Math.round(window.innerHeight * dpr);
+  if (confettiCanvas.width !== w || confettiCanvas.height !== h) {
+    confettiCanvas.width = w;
+    confettiCanvas.height = h;
+  }
+  confettiCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+
+// Zurrusta bat alde batetik (side: -1 ezkerra, 1 eskuina), barrurantz eta gora
+function confettiBurst(side, count) {
+  const W = window.innerWidth, H = window.innerHeight;
+  const scale = Math.max(0.6, Math.min(1.4, Math.min(W, H) / 540));
+  for (let i = 0; i < count; i++) {
+    const angle = (-(35 + Math.random() * 40)) * Math.PI / 180; // gorantz 35°–75°
+    const speed = (650 + Math.random() * 550) * scale;
+    confetti.push({
+      x: side < 0 ? -10 : W + 10,
+      y: H * (0.55 + Math.random() * 0.3),
+      vx: -side * Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed,
+      w: (7 + Math.random() * 7) * scale,
+      h: (4 + Math.random() * 5) * scale,
+      round: Math.random() < 0.2,
+      color: CONFETTI_COLORS[(Math.random() * CONFETTI_COLORS.length) | 0],
+      rot: Math.random() * Math.PI * 2,
+      vrot: (Math.random() - 0.5) * 12,
+      flip: Math.random() * Math.PI * 2,
+      vflip: 6 + Math.random() * 8,
+      wobble: Math.random() * Math.PI * 2,
+      life: 0,
+    });
+  }
+  if (!confettiRunning) {
+    confettiRunning = true;
+    confettiLast = 0;
+    requestAnimationFrame(confettiLoop);
+  }
+}
+
+// Irabazteko ospakizuna: hainbat olatu bi alboetatik
+function launchConfetti(waves = 3, perSide = 45) {
+  if (!confettiCtx) return;
+  sizeConfettiCanvas();
+  const reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const n = reduced ? Math.ceil(perSide / 3) : perSide;
+  const w = reduced ? 1 : waves;
+  for (let i = 0; i < w; i++) {
+    confettiTimers.push(setTimeout(() => {
+      confettiBurst(-1, n);
+      confettiBurst(1, n);
+    }, i * 350));
+  }
+}
+
+function clearConfetti() {
+  confettiTimers.forEach(clearTimeout);
+  confettiTimers = [];
+  confetti = [];
+  if (confettiCtx) confettiCtx.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height);
+}
+
+function confettiLoop(ts) {
+  if (!confettiLast) confettiLast = ts;
+  const dt = Math.min(0.05, (ts - confettiLast) / 1000);
+  confettiLast = ts;
+  sizeConfettiCanvas(); // pantaila biratu/aldatu bada
+  const W = window.innerWidth, H = window.innerHeight;
+  const drag = Math.exp(-CONFETTI_DRAG * dt);
+
+  confettiCtx.clearRect(0, 0, W, H);
+  confetti = confetti.filter((p) => {
+    p.life += dt;
+    p.vx *= drag;
+    p.vy = p.vy * drag + CONFETTI_GRAVITY * dt;
+    p.wobble += dt * 5;
+    p.x += (p.vx + Math.sin(p.wobble) * 30) * dt;
+    p.y += p.vy * dt;
+    p.rot += p.vrot * dt;
+    p.flip += p.vflip * dt;
+    if (p.y > H + 30 || p.life > 7) return false;
+
+    const fade = p.life > 5.5 ? Math.max(0, (7 - p.life) / 1.5) : 1;
+    confettiCtx.globalAlpha = fade;
+    confettiCtx.fillStyle = p.color;
+    confettiCtx.save();
+    confettiCtx.translate(p.x, p.y);
+    confettiCtx.rotate(p.rot);
+    // biraketa 3D itxura: altuera kosinuarekin uzkurtzen da
+    confettiCtx.scale(1, Math.abs(Math.cos(p.flip)) * 0.85 + 0.15);
+    if (p.round) {
+      confettiCtx.beginPath();
+      confettiCtx.arc(0, 0, p.h * 0.7, 0, Math.PI * 2);
+      confettiCtx.fill();
+    } else {
+      confettiCtx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+    }
+    confettiCtx.restore();
+    return true;
+  });
+  confettiCtx.globalAlpha = 1;
+
+  if (confetti.length) {
+    requestAnimationFrame(confettiLoop);
+  } else {
+    confettiRunning = false;
   }
 }
 
@@ -1005,7 +1135,10 @@ function initPrizeScreen() {
       const prize = pickWeightedPrize();
       const code = prize.label;
       savePrize(code);
-      setTimeout(() => revealPrizeResult(code), 500);
+      setTimeout(() => {
+        revealPrizeResult(code);
+        launchConfetti(1, 35);
+      }, 500);
     };
     btn.onclick = onChoose;
   });
