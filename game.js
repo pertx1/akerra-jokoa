@@ -1150,12 +1150,14 @@ function revealPrizeResult(code) {
   document.getElementById('prize-code').textContent = code;
   const result = document.getElementById('prize-result');
   result.classList.add('visible');
+  document.querySelector('.prize-content').classList.add('revealed');
 }
 
 function initPrizeScreen() {
   const choicesWrap = document.getElementById('prize-choices');
   const result = document.getElementById('prize-result');
   result.classList.remove('visible');
+  document.querySelector('.prize-content').classList.remove('revealed');
   document.getElementById('btn-copy').classList.remove('copied');
   document.getElementById('btn-copy').textContent = 'KOPIATU';
 
