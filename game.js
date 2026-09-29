@@ -322,6 +322,13 @@ function alignHud(containerW, canvasW) {
   hud.style.width = width + 'px';
   hud.style.right = 'auto';
   hud.style.margin = '0';
+
+  // Jauzi-laguntza jokalariaren eskuinaldean (ez du pertsonaia estaltzen)
+  const hint = document.getElementById('tap-hint');
+  if (hint) {
+    hint.style.setProperty('--hint-x', (canvasLeft + canvasW * 0.71) + 'px');
+    hint.style.setProperty('--hint-max-w', Math.max(200, canvasW * 0.54) + 'px');
+  }
 }
 
 function resizeCanvas() {
@@ -484,6 +491,7 @@ let nextSpawnIn = 1.2;
 let groundOffset = 0;
 let bgOffset = 0;
 const progressFillEl = document.getElementById('progress-fill');
+const tapHintEl = document.getElementById('tap-hint');
 let currentSpeed = CONFIG.SPEED_INITIAL;
 
 let winSeq = null; // { phase, t, stone }
@@ -495,7 +503,9 @@ function getGroundY() {
 function resetGame() {
   clearConfetti();
   elapsed = 0;
-  gameState = 'playing';
+  // Lehen ukitura arte zain: pantailan azaltzen da nola egin jauzi
+  gameState = 'ready';
+  tapHintEl.classList.add('visible');
   obstacles = [];
   nextSpawnIn = 1.4;
   groundOffset = 0;
@@ -517,6 +527,11 @@ function resetGame() {
 }
 
 function jump() {
+  if (gameState === 'ready') {
+    // lehen ukitua: partida hasi (eta jauzi egin)
+    gameState = 'playing';
+    tapHintEl.classList.remove('visible');
+  }
   if (gameState !== 'playing') return;
   if (!player.onGround) return;
   player.vy = -CONFIG.JUMP_FORCE;
@@ -650,7 +665,11 @@ function triggerWin() {
    Eguneratzea (update)
    ========================================================= */
 function update(dt) {
-  if (gameState === 'playing') {
+  if (gameState === 'ready') {
+    // mundua geldirik; sorgina bakarrik mugitzen da
+    witch.bobT += dt * 2;
+    witch.y = LOGICAL_H * 0.18 + Math.sin(witch.bobT) * 14;
+  } else if (gameState === 'playing') {
     elapsed += dt;
     const progressRatio = Math.min(1, elapsed / CONFIG.DURATION);
     progressFillEl.style.width = (progressRatio * 100) + '%';
@@ -1016,6 +1035,7 @@ function handleJumpInput(e) {
 }
 
 canvas.addEventListener('pointerdown', handleJumpInput);
+tapHintEl.addEventListener('pointerdown', handleJumpInput);
 window.addEventListener('keydown', (e) => {
   if (e.code === 'Space' || e.code === 'ArrowUp') {
     handleJumpInput(e);
