@@ -345,6 +345,10 @@ let lastTime = 0;
 
 const GROUND_H_RATIO = 0.22;
 const PLAYER_X_RATIO = 0.33;
+// Korrika-irudien ordena (fitxategi-zenbakiak). Pausoaren faseen arabera:
+// lurreratu (1), pauso osoa (2), atzeko oinak bultza (3), hanka igo (6),
+// hankak elkarrengandik pasa (4), aurreko hanka luzatu (5).
+const RUN_FRAME_ORDER = [1, 2, 3, 6, 4, 5];
 // Lurzoruan bermatzen diren elementuak (oztopoak, harria) pixel hauek
 // hondoratzen dira lurzoruan, airean flotatu beharrean gainean egon daitezen
 const GROUND_OVERLAP = 16;
@@ -569,7 +573,7 @@ function update(dt) {
       player.runTimer += dt;
       if (player.runTimer >= 1 / 12) {
         player.runTimer = 0;
-        player.runFrame = (player.runFrame + 1) % 6;
+        player.runFrame = (player.runFrame + 1) % RUN_FRAME_ORDER.length;
       }
     }
 
@@ -622,7 +626,7 @@ function update(dt) {
       player.runTimer += dt;
       if (player.runTimer >= 1 / 12) {
         player.runTimer = 0;
-        player.runFrame = (player.runFrame + 1) % 6;
+        player.runFrame = (player.runFrame + 1) % RUN_FRAME_ORDER.length;
       }
     }
 
@@ -749,7 +753,7 @@ function render() {
   } else if (player.state === 'win') {
     spriteKey = 'player_win';
   } else {
-    spriteKey = 'player_run_' + (player.runFrame + 1);
+    spriteKey = 'player_run_' + RUN_FRAME_ORDER[player.runFrame];
   }
   drawSprite(ctx, spriteKey, px, player.y, player.w, player.h);
 
