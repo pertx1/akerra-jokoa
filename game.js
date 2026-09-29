@@ -306,7 +306,7 @@ const LOGICAL_W = 960, LOGICAL_H = 540;
 let renderScale = 1;
 let lastSizeKey = '';
 let assetsReady = false;
-let groundStrip = null; // { canvas, w, h } — lurzoruaren zinta aurrez marraztuta
+const strips = new Map(); // gakoa -> { canvas, w, h }, aurrez marraztutako zintak
 
 function resizeCanvas() {
   const container = screens.game;
@@ -330,7 +330,7 @@ function resizeCanvas() {
   if (sizeKey !== lastSizeKey) {
     lastSizeKey = sizeKey;
     scaledCache.clear();
-    groundStrip = null;
+    strips.clear();
     if (assetsReady) prewarmCaches();
   }
 }
@@ -355,6 +355,8 @@ const GROUND_OVERLAP = 16;
 // Lurzoruaren lauza bakoitza zabalago marrazten da (proportzioa mantenduz
 // altueran, baina zabalera gehiago luzatuz) junturak gutxiagotan agertzeko
 const GROUND_WIDTH_SCALE = 2.0;
+// Atzeko basoaren abiadura, lurzoruarenarekiko (0.3 = %30)
+const BG_PARALLAX = 0.3;
 
 // Sprite bakoitzaren helburu-altuera (px logiko), zabalera irudi
 // bakoitzaren benetako proportziotik kalkulatzen da (spriteBox bidez)
@@ -377,8 +379,8 @@ const SPRITE_FALLBACK_ASPECT = {
 // Sustrai guztiak zabalera berarekin marrazten dira; altuera bakoitzaren
 // proportziotik ateratzen da, gehienez ROOT_MAX_H (arku altuak txikiagotuz).
 // Txikiagotu balio hauek jauzia errazteko, handitu zailtzeko.
-const ROOT_WIDTH = 130;
-const ROOT_MAX_H = 60;
+const ROOT_WIDTH = 150;
+const ROOT_MAX_H = 69;
 function obstacleBox(type) {
   const img = assets[type];
   const aspect = img ? imgWidth(img) / imgHeight(img) : SPRITE_FALLBACK_ASPECT[type];
@@ -428,8 +430,8 @@ function prewarmCaches() {
     const box = spriteBox(imgKey, SPRITE_TARGET_H[k], SPRITE_FALLBACK_ASPECT[k]);
     scaledSprite(imgKey, box.w, box.h);
   });
-  scaledSprite('bg_forest', LOGICAL_W, LOGICAL_H);
-  buildGroundStrip(LOGICAL_H * GROUND_H_RATIO);
+  buildStrip('bg_forest', LOGICAL_H, 1);
+  buildStrip('ground', LOGICAL_H * GROUND_H_RATIO, GROUND_WIDTH_SCALE);
   RUN_FRAME_ORDER.forEach((i) => spriteMask('player_run_' + i, player.w, player.h));
   spriteMask('player_jump', player.w, player.h);
   ['root_1', 'root_2', 'root_3'].forEach((k) => {
@@ -448,6 +450,7 @@ function computeSpriteSizes() {
 let obstacles = [];
 let nextSpawnIn = 1.2;
 let groundOffset = 0;
+let bgOffset = 0;
 const progressFillEl = document.getElementById('progress-fill');
 let currentSpeed = CONFIG.SPEED_INITIAL;
 
@@ -463,6 +466,7 @@ function resetGame() {
   obstacles = [];
   nextSpawnIn = 1.4;
   groundOffset = 0;
+  bgOffset = 0;
   currentSpeed = CONFIG.SPEED_INITIAL;
   player.vy = 0;
   player.onGround = true;
@@ -610,6 +614,7 @@ function update(dt) {
     currentSpeed = CONFIG.SPEED_INITIAL + (CONFIG.SPEED_MAX - CONFIG.SPEED_INITIAL) * progressRatio;
 
     groundOffset += currentSpeed * dt;
+    bgOffset += currentSpeed * BG_PARALLAX * dt;
 
     // jokalariaren fisika
     player.vy += CONFIG.GRAVITY * dt;
@@ -670,6 +675,7 @@ function update(dt) {
     winSeq.t += dt;
     currentSpeed = Math.max(60, currentSpeed - 260 * dt);
     groundOffset += currentSpeed * dt;
+    bgOffset += currentSpeed * BG_PARALLAX * dt;
 
     // sorgina ihesi
     witch.x -= 500 * dt;
@@ -709,15 +715,15 @@ function update(dt) {
 /* =========================================================
    Marrazketa (render)
    ========================================================= */
-// Lurzoruaren zinta behin marrazten da canvas batean: textura normala eta,
-// ondoan, bere ispilua. Bi junturak simetrikoak dira, beraz zinta amaigabe
-// errepika daiteke ebakirik gabe. Fotograma bakoitzean zinta hau 2-3 aldiz
-// kopiatzea besterik ez da behar (eskalatu edo biratu gabe).
-function buildGroundStrip(h) {
-  const img = assets.ground;
-  const aspect = img ? imgWidth(img) / imgHeight(img) : 1280 / 220;
+// Zinta bat behin marrazten da canvas batean: irudia normal eta, ondoan,
+// bere ispilua. Bi junturak simetrikoak dira, beraz zinta amaigabe errepika
+// daiteke ebakirik gabe. Fotograma bakoitzean 2-3 aldiz kopiatzea besterik ez
+// da behar (eskalatu edo biratu gabe). Lurzorua eta atzeko basoa horrela doaz.
+function buildStrip(key, h, widthScale) {
+  const img = assets[key];
+  const aspect = img ? imgWidth(img) / imgHeight(img) : LOGICAL_W / h;
   const dpr = renderScale;
-  const tilePw = Math.max(1, Math.round(h * aspect * GROUND_WIDTH_SCALE * dpr));
+  const tilePw = Math.max(1, Math.round(h * aspect * widthScale * dpr));
   const ph = Math.max(1, Math.round(h * dpr));
   const c = document.createElement('canvas');
   c.width = tilePw * 2;
@@ -730,39 +736,35 @@ function buildGroundStrip(h) {
     g.scale(-1, 1);
     g.drawImage(img, 0, 0, tilePw, ph);
   } else {
-    g.fillStyle = FALLBACK_COLORS.ground;
+    g.fillStyle = FALLBACK_COLORS[key] || '#333';
     g.fillRect(0, 0, c.width, ph);
   }
-  groundStrip = { canvas: c, w: c.width / dpr, h };
+  const strip = { canvas: c, w: c.width / dpr, h };
+  strips.set(key, strip);
+  return strip;
 }
 
-function drawGround(offset, y, h) {
-  if (!groundStrip || groundStrip.h !== h) buildGroundStrip(h);
+function drawStrip(key, offset, y, h, widthScale) {
+  let strip = strips.get(key);
+  if (!strip || strip.h !== h) strip = buildStrip(key, h, widthScale);
   const dpr = renderScale;
-  const period = groundStrip.w;
+  const period = strip.w;
   // pixel osoetara biribildu, kopien arteko juntura-lerro finik ez agertzeko
   let x = Math.round(-(offset % period) * dpr) / dpr;
   for (; x < LOGICAL_W; x += period) {
-    ctx.drawImage(groundStrip.canvas, x, y, period, h);
+    ctx.drawImage(strip.canvas, x, y, period, h);
   }
-}
-
-// bg_forest ez da seamless-a (eszena finko bat da, ez textura errepikagarria),
-// beraz behin bakarrik marrazten da, errepikatu gabe, "biraka" itxura saihesteko
-function drawStaticBackground(key, y, h) {
-  drawSprite(ctx, key, 0, y, LOGICAL_W, h);
 }
 
 function render() {
   ctx.clearRect(0, 0, LOGICAL_W, LOGICAL_H);
 
-  // zerua / basoa
-  const bgH = LOGICAL_H;
-  drawStaticBackground('bg_forest', 0, bgH);
+  // basoa (lurzorua baino motelago, sakonera emateko)
+  drawStrip('bg_forest', bgOffset, 0, LOGICAL_H, 1);
 
   // lurzorua
   const groundH = LOGICAL_H * GROUND_H_RATIO;
-  drawGround(groundOffset, LOGICAL_H - groundH, groundH);
+  drawStrip('ground', groundOffset, LOGICAL_H - groundH, groundH, GROUND_WIDTH_SCALE);
 
   // sorgina (beheko zatia gardenagoa: iturburuko irudia bi zerrendatan
   // ebaki eta bakoitza bere lekuan marrazten dugu, irudia bikoiztu gabe)
