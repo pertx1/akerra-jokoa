@@ -42,7 +42,7 @@ dardara egingo baitu frame batetik bestera.
 |---|---|---|
 | `player_run_1.png` … `player_run_6.png` | 120×160 | Bai. Korrika animazioaren 6 frame (12 fps-ra erreproduzitzen dira). |
 | `player_jump.png` | 120×160 | Bai. Jauzian dagoenean erakusten den irudia. |
-| `player_win.png` | 120×160 | Bai. Harria/eguzkilorea lortzean erakusten den irudia (irabazi-posea). |
+| `player_win.png` | 120×160 (goian altuago izan daiteke) | Bai. Harria/eguzkilorea lortzean erakusten den irudia (irabazi-posea). Korrika-frameen eskala berean marrazten da, oinetan lotuta; beraz ukabila altxatuta badu, irudia goitik altuagoa izan daiteke (adib. 360×512) pertsonaia txikitu gabe. |
 
 ## /enemies
 

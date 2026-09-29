@@ -431,7 +431,10 @@ const witch = {
 // agertzean irudi handia deskodetu/eskalatu beharrak tirankadarik ez eragiteko
 function prewarmCaches() {
   ['player_run_1', 'player_run_2', 'player_run_3', 'player_run_4', 'player_run_5',
-    'player_run_6', 'player_jump', 'player_win'].forEach((k) => scaledSprite(k, player.w, player.h));
+    'player_run_6', 'player_jump', 'player_win'].forEach((k) => {
+    const b = playerDrawBox(k);
+    scaledSprite(k, b.w, b.h);
+  });
   scaledSprite('witch', witch.w, witch.h);
   ['root_1', 'root_2', 'root_3'].forEach((k) => {
     const box = obstacleBox(k);
@@ -549,6 +552,17 @@ function spriteMask(key, w, h) {
   }
   maskCache.set(id, mask);
   return mask;
+}
+
+// Korrika-frameen eskala berean marrazten da beste edozein pose (adib.
+// player_win-ek goialdean toki gehiago du ukabil altxaturako): irudiaren
+// tamaina errealaren arabera eskalatzen da player_run_1-ekiko, oinetan lotuta.
+function playerDrawBox(key) {
+  const img = assets[key], ref = assets.player_run_1;
+  if (!img || !ref || key.startsWith('player_run_')) return { w: player.w, h: player.h, dy: 0 };
+  const w = player.w * imgWidth(img) / imgWidth(ref);
+  const h = player.h * imgHeight(img) / imgHeight(ref);
+  return { w, h, dy: player.h - h };
 }
 
 function playerSpriteKey() {
@@ -816,7 +830,8 @@ function render() {
 
   // jokalaria
   const px = LOGICAL_W * PLAYER_X_RATIO;
-  drawSprite(ctx, playerSpriteKey(), px, player.y, player.w, player.h);
+  const pb = playerDrawBox(playerSpriteKey());
+  drawSprite(ctx, playerSpriteKey(), px, player.y + pb.dy, pb.w, pb.h);
 
   // fundido beltzera irabazte-sekuentziaren amaieran
   if (gameState === 'winSeq' && winSeq && winSeq.phase === 'fadeout') {
