@@ -379,6 +379,18 @@ const SPRITE_FALLBACK_ASPECT = {
 // Sustrai guztiak zabalera berarekin marrazten dira; altuera bakoitzaren
 // proportziotik ateratzen da, gehienez ROOT_MAX_H (arku altuak txikiagotuz).
 // Txikiagotu balio hauek jauzia errazteko, handitu zailtzeko.
+// Sustrai berri baten arteko denbora (s), abiadurarekin laburtzen dena:
+// hasieran [1.0, 1.6], amaieran [0.7, 1.2]. Beti jauzi daitezke: jokalari
+// perfektu batek gutxienez 0.75 s (hasieran) / 0.5 s (amaieran) behar ditu.
+const SPAWN_MIN_START = 1.0, SPAWN_MIN_END = 0.7;
+const SPAWN_RANGE_START = 0.6, SPAWN_RANGE_END = 0.5;
+
+function spawnInterval(progress) {
+  const min = SPAWN_MIN_START + (SPAWN_MIN_END - SPAWN_MIN_START) * progress;
+  const range = SPAWN_RANGE_START + (SPAWN_RANGE_END - SPAWN_RANGE_START) * progress;
+  return min + Math.random() * range;
+}
+
 const ROOT_WIDTH = 150;
 const ROOT_MAX_H = 69;
 function obstacleBox(type) {
@@ -645,7 +657,7 @@ function update(dt) {
       nextSpawnIn -= dt;
       if (nextSpawnIn <= 0) {
         spawnObstacle();
-        nextSpawnIn = 1.1 + Math.random() * 1.0;
+        nextSpawnIn = spawnInterval(progressRatio);
       }
     }
     for (const o of obstacles) {
