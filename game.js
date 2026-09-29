@@ -9,6 +9,10 @@ const CONFIG = {
   SPEED_MAX: 620,         // abiadura maximoa
   GRAVITY: 2200,          // grabitatea (px/s^2)
   JUMP_FORCE: 820,        // jauziaren indarra (px/s)
+  // Mugikorrean (ukipen-pantailan) sustraiak handiagoak dira, proportzioa
+  // mantenduz. Jauziaren arkua ere faktore berean handitzen da (altuago eta
+  // luzeago), zailtasuna berdina izan dadin. 1 = ordenagailuan bezala.
+  MOBILE_ROOT_SCALE: 1.3,
   SHOP_URL: 'https://akerra.eus',
   PRIZES: [
     { label: 'J10', discount: 10, weight: 60 },
@@ -410,20 +414,27 @@ const SPAWN_MIN_START = 1.0, SPAWN_MIN_END = 0.7;
 const SPAWN_RANGE_START = 0.6, SPAWN_RANGE_END = 0.5;
 
 function spawnInterval(progress) {
-  const min = SPAWN_MIN_START + (SPAWN_MIN_END - SPAWN_MIN_START) * progress;
+  // mugikorrean sustraiak luzeagoak dira: tarte pixka bat handiagoa
+  const min = SPAWN_MIN_START + (SPAWN_MIN_END - SPAWN_MIN_START) * progress + SPAWN_MOBILE_EXTRA;
   const range = SPAWN_RANGE_START + (SPAWN_RANGE_END - SPAWN_RANGE_START) * progress;
   return min + Math.random() * range;
 }
 
 const ROOT_WIDTH = 150;
 const ROOT_MAX_H = 69;
+const isTouchDevice = !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
+const rootScale = isTouchDevice ? CONFIG.MOBILE_ROOT_SCALE : 1;
+// grabitatea / k → jauziaren arkua k aldiz altuagoa eta luzeagoa
+const gravity = CONFIG.GRAVITY / rootScale;
+const SPAWN_MOBILE_EXTRA = (rootScale - 1) * 0.5;
 function obstacleBox(type) {
   const img = assets[type];
   const aspect = img ? imgWidth(img) / imgHeight(img) : SPRITE_FALLBACK_ASPECT[type];
-  let w = ROOT_WIDTH;
+  const maxH = ROOT_MAX_H * rootScale;
+  let w = ROOT_WIDTH * rootScale;
   let h = w / aspect;
-  if (h > ROOT_MAX_H) {
-    h = ROOT_MAX_H;
+  if (h > maxH) {
+    h = maxH;
     w = h * aspect;
   }
   return { w, h };
@@ -680,7 +691,7 @@ function update(dt) {
     bgOffset += currentSpeed * BG_PARALLAX * dt;
 
     // jokalariaren fisika
-    player.vy += CONFIG.GRAVITY * dt;
+    player.vy += gravity * dt;
     player.y += player.vy * dt;
     const groundY = getGroundY() - player.h;
     if (player.y >= groundY) {

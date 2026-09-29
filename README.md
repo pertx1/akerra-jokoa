@@ -40,6 +40,7 @@ Ondoren ireki `http://localhost:8000` nabigatzailean.
 - `DURATION`: partidaren iraupena segundotan (18 lehenetsita).
 - `SPEED_INITIAL` / `SPEED_MAX`: abiadura hasieran eta gehienez.
 - `GRAVITY` / `JUMP_FORCE`: jauziaren fisika.
+- `MOBILE_ROOT_SCALE`: mugikorrean sustraiak zenbat aldiz handiagoak diren (1.3 lehenetsita; jauziaren arkua ere proportzio berean handitzen da). `1` jarrita, ordenagailuan bezala.
 - `SHOP_URL`: "DENDARA JOAN" botoiak irekitzen duen esteka.
 - `PRIZES`: sarien zerrenda pisu bakoitzarekin (portzentajezko probabilitatea).
 
