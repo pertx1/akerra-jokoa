@@ -430,6 +430,12 @@ function prewarmCaches() {
   });
   scaledSprite('bg_forest', LOGICAL_W, LOGICAL_H);
   buildGroundStrip(LOGICAL_H * GROUND_H_RATIO);
+  RUN_FRAME_ORDER.forEach((i) => spriteMask('player_run_' + i, player.w, player.h));
+  spriteMask('player_jump', player.w, player.h);
+  ['root_1', 'root_2', 'root_3'].forEach((k) => {
+    const box = obstacleBox(k);
+    spriteMask(k, box.w, box.h);
+  });
 }
 
 function computeSpriteSizes() {
@@ -499,30 +505,77 @@ function rectsOverlap(a, b) {
   return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
 }
 
+// Talka-maskarak: irudi bakoitzaren forma erreala (gardentasunetik),
+// pantailako neurrian. Talka marrazkiak benetan ukitzen direnean bakarrik
+// gertatzen da, ez laukizuzenak gainjartzen direnean.
+const maskCache = new Map();
+const MASK_MIN_OVERLAP = 4; // pixel bakarreko ukitzeak ez dira talka
+
+function spriteMask(key, w, h) {
+  const mw = Math.max(1, Math.round(w)), mh = Math.max(1, Math.round(h));
+  const id = key + '|' + mw + 'x' + mh;
+  if (maskCache.has(id)) return maskCache.get(id);
+  let mask = null;
+  const img = assets[key];
+  if (img) {
+    try {
+      const c = document.createElement('canvas');
+      c.width = mw;
+      c.height = mh;
+      const g = c.getContext('2d');
+      g.drawImage(img, 0, 0, mw, mh);
+      const data = g.getImageData(0, 0, mw, mh).data;
+      const bits = new Uint8Array(mw * mh);
+      for (let i = 0; i < bits.length; i++) bits[i] = data[i * 4 + 3] > 128 ? 1 : 0;
+      mask = { w: mw, h: mh, bits };
+    } catch (e) { mask = null; /* adib. file:// bidez: laukizuzenak erabili */ }
+  }
+  maskCache.set(id, mask);
+  return mask;
+}
+
+function playerSpriteKey() {
+  if (player.state === 'jump') return 'player_jump';
+  if (player.state === 'win') return 'player_win';
+  return 'player_run_' + RUN_FRAME_ORDER[player.runFrame];
+}
+
+function masksOverlap(ma, ax, ay, mb, bx, by) {
+  const x1 = Math.max(ax, bx), y1 = Math.max(ay, by);
+  const x2 = Math.min(ax + ma.w, bx + mb.w), y2 = Math.min(ay + ma.h, by + mb.h);
+  if (x1 >= x2 || y1 >= y2) return false;
+  let hits = 0;
+  for (let y = Math.floor(y1); y < y2; y++) {
+    const ra = (y - ay) | 0, rb = (y - by) | 0;
+    if (ra < 0 || rb < 0 || ra >= ma.h || rb >= mb.h) continue;
+    for (let x = Math.floor(x1); x < x2; x++) {
+      const ca = (x - ax) | 0, cb = (x - bx) | 0;
+      if (ca < 0 || cb < 0 || ca >= ma.w || cb >= mb.w) continue;
+      if (ma.bits[ra * ma.w + ca] && mb.bits[rb * mb.w + cb] && ++hits >= MASK_MIN_OVERLAP) return true;
+    }
+  }
+  return false;
+}
+
+// Maskarak irakurri ezin badira: lehengo laukizuzenak (%70, jokalariarena oinetan)
+function rectCollision(px, o) {
+  const pw = player.w * 0.7, ph = player.h * 0.7;
+  const pRect = { x: px + (player.w - pw) / 2, y: player.y + player.h - ph, w: pw, h: ph };
+  const ow = o.w * 0.7, oh = o.h * 0.7;
+  const oRect = { x: o.x + (o.w - ow) / 2, y: o.y + (o.h - oh) / 2, w: ow, h: oh };
+  return rectsOverlap(pRect, oRect);
+}
+
 function checkCollisions() {
   const px = LOGICAL_W * PLAYER_X_RATIO;
-  const pw = player.w * 0.7;
-  const ph = player.h * 0.7;
-  // oinetan finkatuta: alboak eta burua bakarrik murrizten dira, bestela
-  // sustrai baxuek ez lukete inoiz zutik dagoen jokalaria jotzen
-  const pRect = {
-    x: px + (player.w - pw) / 2,
-    y: player.y + player.h - ph,
-    w: pw,
-    h: ph,
-  };
+  const pMask = spriteMask(playerSpriteKey(), player.w, player.h);
   for (const o of obstacles) {
-    const ow = o.w * 0.7;
-    const oh = o.h * 0.7;
-    const oRect = {
-      x: o.x + (o.w - ow) / 2,
-      y: o.y + (o.h - oh) / 2,
-      w: ow,
-      h: oh,
-    };
-    if (rectsOverlap(pRect, oRect)) {
-      return true;
-    }
+    if (!rectsOverlap({ x: px, y: player.y, w: player.w, h: player.h }, o)) continue;
+    const oMask = spriteMask(o.type, o.w, o.h);
+    const hit = (pMask && oMask)
+      ? masksOverlap(pMask, px, player.y, oMask, o.x, o.y)
+      : rectCollision(px, o);
+    if (hit) return true;
   }
   return false;
 }
@@ -747,15 +800,7 @@ function render() {
 
   // jokalaria
   const px = LOGICAL_W * PLAYER_X_RATIO;
-  let spriteKey = 'player_run_1';
-  if (player.state === 'jump') {
-    spriteKey = 'player_jump';
-  } else if (player.state === 'win') {
-    spriteKey = 'player_win';
-  } else {
-    spriteKey = 'player_run_' + RUN_FRAME_ORDER[player.runFrame];
-  }
-  drawSprite(ctx, spriteKey, px, player.y, player.w, player.h);
+  drawSprite(ctx, playerSpriteKey(), px, player.y, player.w, player.h);
 
   // fundido beltzera irabazte-sekuentziaren amaieran
   if (gameState === 'winSeq' && winSeq && winSeq.phase === 'fadeout') {
