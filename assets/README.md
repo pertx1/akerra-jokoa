@@ -28,7 +28,6 @@ soilik ematen da.
 |---|---|---|
 | `bg_forest.png` | 1280×720 | Ez (opakua). Basoko eszena osoa, atzeko plano finko gisa marrazten da (ez da errepikatzen/tiling). |
 | `ground.png` | 1280×220 | Ez (opakua). Lurzoruaren zerrenda, ezkerretik eskuinera errepikagarria (seamless hobe). |
-| `door_bg.png` | 1280×720 | Ez (opakua). Sarien pantailako atzeko planoa (ate magikoa / basoko leizea). |
 
 ## /player
 

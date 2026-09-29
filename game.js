@@ -26,7 +26,6 @@ const STORAGE_KEY = 'akerra_jokoa_prize_v1';
 const ASSET_LIST = {
   bg_forest: 'assets/backgrounds/bg_forest.png',
   ground: 'assets/backgrounds/ground.png',
-  door_bg: 'assets/backgrounds/door_bg.png',
   player_run_1: 'assets/player/player_run_1.png',
   player_run_2: 'assets/player/player_run_2.png',
   player_run_3: 'assets/player/player_run_3.png',
@@ -47,7 +46,6 @@ const ASSET_LIST = {
 const FALLBACK_COLORS = {
   bg_forest: '#182e21',
   ground: '#5a3e26',
-  door_bg: '#231c36',
   player_run_1: '#d6953d', player_run_2: '#dba04a', player_run_3: '#e0ab57',
   player_run_4: '#d6953d', player_run_5: '#d08a30', player_run_6: '#d38f36',
   player_jump: '#63ad5a',
