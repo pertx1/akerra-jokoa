@@ -4,7 +4,7 @@
    AKERRA JOKOA — konfigurazioa
    ========================================================= */
 const CONFIG = {
-  DURATION: 25,           // partida-iraupena segundotan
+  DURATION: 18,           // partida-iraupena segundotan
   SPEED_INITIAL: 320,     // abiadura hasieran (px/s logiko)
   SPEED_MAX: 620,         // abiadura maximoa
   GRAVITY: 2200,          // grabitatea (px/s^2)

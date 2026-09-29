@@ -32,7 +32,7 @@ soilik ematen da.
 
 ## /player
 
-Pertsonaia beti 25%-ean kokatzen da ezkerrean. **Altuera helburua: ~160px**
+Pertsonaia beti %33-an kokatzen da ezkerretik. **Altuera helburua: ~160px**
 (zabalera automatikoki kalkulatzen da irudiaren proportziotik). Sprite
 guztiek **tamaina eta proportzio bera** izan behar dute elkarren artean
 (guztiak 120×160 placeholder-etan, adibidez), bestela korrika-animazioak

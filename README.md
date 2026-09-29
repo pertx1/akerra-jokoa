@@ -37,7 +37,7 @@ Ondoren ireki `http://localhost:8000` nabigatzailean.
 
 `game.js` fitxategiaren goialdean dagoen `CONFIG` objektuan alda daitezke:
 
-- `DURATION`: partidaren iraupena segundotan (25 lehenetsita).
+- `DURATION`: partidaren iraupena segundotan (18 lehenetsita).
 - `SPEED_INITIAL` / `SPEED_MAX`: abiadura hasieran eta gehienez.
 - `GRAVITY` / `JUMP_FORCE`: jauziaren fisika.
 - `SHOP_URL`: "DENDARA JOAN" botoiak irekitzen duen esteka.
